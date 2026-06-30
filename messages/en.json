@@ -1,0 +1,197 @@
+{
+  "common": {
+    "appName": "FasalGuard",
+    "loading": "Loading...",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "save": "Save",
+    "back": "Back",
+    "share": "Share",
+    "call": "Call",
+    "directions": "Directions",
+    "scanNow": "Scan Now",
+    "findDealer": "Find Local Dealer",
+    "shareWhatsApp": "Share on WhatsApp",
+    "language": {
+      "english": "English",
+      "urdu": "اردو"
+    },
+    "error": {
+      "generic": "Something went wrong. Please try again.",
+      "network": "No internet connection. Check your signal.",
+      "camera": "Camera access denied. Please grant permission in settings.",
+      "location": "Location access denied. We need your location to find nearby dealers.",
+      "lowConfidence": "Could not identify clearly. Please retake the photo in better light.",
+      "imageTooDark": "Image is too dark. Move to better lighting and try again.",
+      "imageTooSmall": "Image too small. Move closer to the crop and retake.",
+      "tooManyRequests": "Too many scans. Please wait a moment before scanning again."
+    }
+  },
+
+  "splash": {
+    "tagline": "Protect Your Crop with AI",
+    "subtitle": "Detect disease. Get treatment. Instantly.",
+    "selectLanguage": "Select your language",
+    "continueEnglish": "Continue in English",
+    "continueUrdu": "جاری رکھیں اردو میں"
+  },
+
+  "home": {
+    "greeting": "Good day, Farmer",
+    "yourCrops": "Your Crops",
+    "addCrop": "Add Crop",
+    "recentScans": "Recent Scans",
+    "viewAll": "View All",
+    "noCrops": {
+      "title": "Add Your First Crop",
+      "description": "Tell us which crops you grow so we can give you the best disease advice.",
+      "cta": "Add Crop"
+    },
+    "noScans": {
+      "title": "No scans yet",
+      "description": "Scan your first crop to see disease results here."
+    },
+    "error": {
+      "title": "Could not load your crops",
+      "description": "Check your connection and try again."
+    }
+  },
+
+  "addCrop": {
+    "title": "Select Your Crops",
+    "searchPlaceholder": "Search crops...",
+    "save": "Save Selected Crops",
+    "cancel": "Cancel",
+    "selected": "{count} selected",
+    "noResults": "No crops found for \"{query}\"",
+    "loading": {
+      "title": "Loading crops..."
+    },
+    "error": {
+      "title": "Could not load crop list",
+      "description": "Please try again.",
+      "cta": "Retry"
+    }
+  },
+
+  "scanner": {
+    "initializing": "Camera starting...",
+    "instruction": "Point at a leaf or plant",
+    "capture": "Capture",
+    "selectCrop": "Select Crop",
+    "permissionDenied": {
+      "title": "Camera Permission Required",
+      "description": "FasalGuard needs camera access to scan your crops. Please allow camera access in your browser settings.",
+      "cta": "Grant Permission"
+    }
+  },
+
+  "diagnosis": {
+    "analyzing": "Analysing your crop...",
+    "analyzingSubtitle": "This may take a few seconds",
+    "diseaseDetected": "Disease Detected",
+    "healthy": "Crop is Healthy",
+    "earlyWarning": "Early Warning",
+    "confidence": {
+      "high": "High confidence result",
+      "medium": "Medium confidence — retaking the photo may improve accuracy",
+      "label": "Confidence"
+    },
+    "severity": {
+      "healthy": "Healthy",
+      "low": "Low Risk",
+      "moderate": "Moderate",
+      "high": "High",
+      "urgent": "URGENT"
+    },
+    "treatment": {
+      "title": "Treatment Recommendation",
+      "primaryProduct": "Primary Treatment",
+      "alternativeProduct": "Alternative",
+      "dosage": "Dosage",
+      "timing": "When to Apply",
+      "safety": "Safety Note"
+    },
+    "actions": {
+      "findDealer": "Find Local Dealer",
+      "shareWhatsApp": "Share on WhatsApp",
+      "listen": "Listen",
+      "retryScan": "Retry Scan"
+    },
+    "error": {
+      "title": "Analysis Failed",
+      "description": "Could not analyse the image. Please try scanning again.",
+      "cta": "Retry Scan"
+    }
+  },
+
+  "dealers": {
+    "title": "Local Dealers",
+    "searchPlaceholder": "Search by area or dealer name...",
+    "filters": {
+      "all": "All",
+      "openNow": "Open Now"
+    },
+    "card": {
+      "open": "Open",
+      "closed": "Closed",
+      "distance": "{distance} km away",
+      "call": "Call",
+      "directions": "Directions"
+    },
+    "loading": {
+      "title": "Finding nearby dealers..."
+    },
+    "empty": {
+      "title": "No dealers found",
+      "description": "No agricultural dealers were found in this area.",
+      "cta": "Search Different Area"
+    },
+    "locationError": {
+      "title": "Location Required",
+      "description": "We need your location to show nearby dealers. Please enable location access in your browser settings.",
+      "cta": "Try Again"
+    }
+  },
+
+  "history": {
+    "title": "Scan History",
+    "loading": "Loading your scan history...",
+    "empty": {
+      "title": "No scans yet",
+      "description": "Your past scan results will appear here after you scan your first crop.",
+      "cta": "Scan Now"
+    },
+    "item": {
+      "healthy": "Healthy",
+      "scannedOn": "Scanned on"
+    }
+  },
+
+  "auth": {
+    "signup": {
+      "title": "Create Account",
+      "subtitle": "Save your scan history across all devices",
+      "phoneLabel": "Mobile Number",
+      "phonePlaceholder": "03XX-XXXXXXX",
+      "sendOtp": "Send OTP",
+      "otpLabel": "Enter OTP",
+      "otpSubtitle": "Enter the 6-digit code sent to {phone}",
+      "verifyOtp": "Verify",
+      "resendOtp": "Resend OTP",
+      "skipForNow": "Skip for now",
+      "errors": {
+        "invalidPhone": "Enter a valid Pakistani mobile number (+92XXXXXXXXXX)",
+        "invalidOtp": "Enter the 6-digit code sent to your phone",
+        "otpExpired": "OTP has expired. Please request a new one.",
+        "tooManyAttempts": "Too many attempts. Please wait 15 minutes."
+      }
+    }
+  },
+
+  "unauthorized": {
+    "title": "Access Restricted",
+    "description": "You do not have permission to view this page.",
+    "cta": "Go Home"
+  }
+}
