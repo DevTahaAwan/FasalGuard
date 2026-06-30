@@ -126,7 +126,7 @@ export default function ScannerPage() {
     stopCamera();
     setAnalyzing();
 
-    // Wrap the entire API call in try/catch so the loader always stops on failure
+    // Client-side retry logic — the server returns immediately, client waits and retries
     try {
       const MAX_RETRIES = 5;
       let lastError = '';
@@ -135,7 +135,7 @@ export default function ScannerPage() {
       for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         let res: Response | null = null;
 
-        // Try to fetch — if the network is down, catch will handle it
+        // Try to call our API route
         try {
           res = await fetch('/api/v1/scan/analyze', {
             method: 'POST',
@@ -144,51 +144,45 @@ export default function ScannerPage() {
           });
         } catch (fetchErr: any) {
           lastError = fetchErr.message || 'Network error';
-          // Wait 3 seconds before retrying on network failures
           if (attempt < MAX_RETRIES - 1) {
             await new Promise((resolve) => setTimeout(resolve, 3000));
             continue;
           }
-          // Last attempt failed — break out and show error
           break;
         }
 
-        // If model is loading (503), wait 5 seconds and retry
+        // If model is loading (503), wait using estimated_time from the response
         if (res.status === 503) {
-          // Try to read the error message from the body
+          let waitMs = 15000; // default 15s wait
           try {
             const errJson = await res.json();
-            lastError = errJson?.message || errJson?.error?.message || 'AI model is loading...';
+            lastError = errJson?.message || 'AI model is loading...';
+            if (errJson.estimated_time) {
+              // Wait the estimated time + 3 seconds buffer
+              waitMs = (errJson.estimated_time + 3) * 1000;
+            }
           } catch {
             lastError = 'AI model is loading...';
           }
           if (attempt < MAX_RETRIES - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 5000));
+            await new Promise((resolve) => setTimeout(resolve, waitMs));
             continue;
           }
           break;
         }
 
-        // If response is not OK, read the error and stop
+        // If response is not OK, read the error and stop immediately
         if (!res.ok) {
           try {
             const errJson = await res.json();
-            if (errJson.message) {
-              lastError = errJson.message;
-            } else if (errJson.error && typeof errJson.error === 'string') {
-              lastError = errJson.error;
-            } else if (errJson.error && errJson.error.message) {
-              lastError = errJson.error.message;
-            } else {
-              lastError = 'Classification failed';
-            }
+            lastError = errJson?.message || errJson?.error || 'Classification failed';
           } catch {
             lastError = 'Classification failed';
           }
           break;
         }
 
-        // Response is OK — try to parse the success body
+        // Response is OK — try to parse
         let json: any = null;
         try {
           json = await res.json();
@@ -198,13 +192,7 @@ export default function ScannerPage() {
         }
 
         if (!json.success) {
-          if (json.message) {
-            lastError = json.message;
-          } else if (json.error && json.error.message) {
-            lastError = json.error.message;
-          } else {
-            lastError = 'Classification failed';
-          }
+          lastError = json?.message || json?.error?.message || 'Classification failed';
           break;
         }
 
@@ -215,12 +203,12 @@ export default function ScannerPage() {
         break;
       }
 
-      // If we exited the loop without succeeding, show a friendly error
+      // If loop ended without success, show friendly error
       if (!succeeded) {
         setError('NETWORK_ERROR', lastError || 'Network timeout. Please try scanning again.');
       }
     } catch (outerErr: any) {
-      // Catch-all: if anything unexpected throws, always stop the loader
+      // Catch-all: always stop the loader
       console.error('handleCapture error:', outerErr);
       setError('UNKNOWN', outerErr.message || 'Network timeout. Please try scanning again.');
     }
@@ -297,13 +285,16 @@ export default function ScannerPage() {
 
         <div className="camera-view" style={{ flex: 1, minHeight: '320px', overflow: 'hidden' }}>
           <div className="camera-bg" style={{ zIndex: 1 }}>
-            {(!cameraActive || phase === 'analyzing') ? (
+            {(!cameraActive || phase === 'analyzing' || phase === 'validating') ? (
                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'absolute', inset: 0, zIndex: 10, background: 'rgba(0,0,0,0.85)' }}>
-                 {phase === 'analyzing' ? (
+                 {(phase === 'analyzing' || phase === 'validating') ? (
                    <>
                      <MathLoader />
                      <p style={{ color: 'white', marginTop: '20px', fontSize: '18px', fontWeight: 'bold' }}>
                        {isRTL ? 'تجزیہ ہو رہا ہے...' : 'Analyzing...'}
+                     </p>
+                     <p style={{ color: 'rgba(255,255,255,0.5)', marginTop: '8px', fontSize: '12px' }}>
+                       {isRTL ? 'پہلی بار میں ایک منٹ لگ سکتا ہے' : 'First scan may take up to a minute'}
                      </p>
                    </>
                  ) : (

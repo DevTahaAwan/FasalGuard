@@ -46,62 +46,40 @@ export async function POST(request: NextRequest) {
     // Convert base64 to binary buffer for the HF API
     const imageBuffer = Buffer.from(base64Data, 'base64');
 
-    // Call HuggingFace Inference API with retry logic for cold starts
-    let hfResponse: Response | null = null;
-    let hfError = '';
-
-    for (let i = 0; i < 5; i++) {
-      try {
-        hfResponse = await fetch(HF_API_URL, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${hfToken}`,
-            'Content-Type': 'application/octet-stream',
-          },
-          body: imageBuffer,
-        });
-
-        if (hfResponse.ok) {
-          // Success — break out of the retry loop
-          break;
-        }
-
-        if (hfResponse.status === 503) {
-          // Model is loading — parse estimated_time from the JSON body
-          let waitSeconds = 10; // default wait if estimated_time is missing
-          try {
-            const loadingBody = await hfResponse.json();
-            if (loadingBody.estimated_time) {
-              // Wait the estimated time plus 2 extra seconds for safety
-              waitSeconds = Math.ceil(loadingBody.estimated_time) + 2;
-            }
-          } catch {
-            // If we can't parse the body, just use the default 10s
-          }
-          console.log(`HuggingFace model loading (attempt ${i + 1}/5), waiting ${waitSeconds}s...`);
-          hfResponse = null;
-          await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000));
-          continue;
-        }
-
-        // Non-503 error — don't retry, break immediately
-        break;
-      } catch (fetchErr: any) {
-        hfError = fetchErr.message || 'fetch failed';
-        console.error(`HuggingFace fetch error (attempt ${i + 1}/5):`, hfError);
-        hfResponse = null;
-        // Wait 3 seconds before retrying on network errors
-        if (i < 4) {
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-          continue;
-        }
-      }
+    // Call HuggingFace Inference API — single attempt, no retries on server
+    // (Vercel serverless has a 10s timeout; retries must happen on the client)
+    let hfResponse: Response;
+    try {
+      hfResponse = await fetch(HF_API_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${hfToken}`,
+          'Content-Type': 'application/octet-stream',
+        },
+        body: imageBuffer,
+      });
+    } catch (fetchErr: any) {
+      console.error('HuggingFace fetch error:', fetchErr.message);
+      return NextResponse.json(
+        { success: false, error: 'Fetch failed', message: 'Could not reach the AI model. Please try again.' },
+        { status: 502 },
+      );
     }
 
-    // If we never got a successful response after all retries
-    if (!hfResponse) {
+    // If model is loading (503), pass estimated_time back to the client
+    if (hfResponse.status === 503) {
+      let estimatedTime = 20;
+      try {
+        const loadingBody = await hfResponse.json();
+        if (loadingBody.estimated_time) {
+          estimatedTime = Math.ceil(loadingBody.estimated_time);
+        }
+      } catch {
+        // ignore parse errors
+      }
+      console.log(`HuggingFace model loading, estimated_time=${estimatedTime}s`);
       return NextResponse.json(
-        { error: 'Model timeout', message: 'The AI is taking too long to wake up. Please try again.' },
+        { success: false, error: 'Model loading', message: 'The AI model is waking up.', estimated_time: estimatedTime },
         { status: 503 },
       );
     }
@@ -110,7 +88,7 @@ export async function POST(request: NextRequest) {
       const errText = await hfResponse.text();
       console.error('HuggingFace API error:', hfResponse.status, errText);
       return NextResponse.json(
-        { success: false, error: { code: 'API_ERROR', message: 'Failed to classify image', message_ur: 'تصویر کی درجہ بندی میں ناکامی' } },
+        { success: false, error: 'API error', message: 'Failed to classify image. Please try again.' },
         { status: 502 },
       );
     }
