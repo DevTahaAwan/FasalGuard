@@ -14,7 +14,7 @@ type ScanPhase =
   | 'complete' // Full result available
   | 'error';
 
-type ScanErrorCode =
+export type ScanErrorCode =
   | 'CAMERA_DENIED'
   | 'IMAGE_TOO_DARK'
   | 'IMAGE_TOO_SMALL'
@@ -23,6 +23,9 @@ type ScanErrorCode =
   | 'API_ERROR'
   | 'NETWORK_ERROR'
   | 'RATE_LIMITED'
+  | 'NOT_A_PLANT'
+  | 'MISSING_IMAGE'
+  | 'PARSE_ERROR'
   | 'UNKNOWN';
 
 interface ScanState {
