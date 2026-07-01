@@ -3,6 +3,13 @@
 //
 // This model outputs labels like "Tomato___Early_blight" or "Potato___healthy".
 // We map each to our internal crop/disease structure with bilingual names.
+//
+// Wheat, Cotton, Rice, Sugarcane, Onion, and Mango entries below are NOT part of
+// the original PlantVillage/HuggingFace label set — the source model was never
+// trained on these crops. These entries exist so the SAME taxonomy can be reused
+// as a constrained enum for the Gemini Vision replacement pipeline. Verified
+// against peer-reviewed and Pakistan-specific agronomy sources as of July 2026.
+// See conversation log for source-by-source verification notes and known gaps.
 
 export interface LabelMapping {
   crop_type_slug: string;
@@ -429,6 +436,415 @@ const LABEL_MAP: Record<string, LabelMapping> = {
     default_severity: 'urgent',
     is_healthy: false,
   },
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // BELOW: Pakistan-priority crops NOT covered by the original PlantVillage/
+  // HuggingFace model. Verified against Pakistan-specific and peer-reviewed
+  // sources (Punjab field surveys, DAWN.com, Pakistan Journal of Phytopathology,
+  // agripunjab.gov.pk institute pages, PMC/ResearchGate publications).
+  // Keys below are NOT HuggingFace labels — they follow the same "Crop___Disease"
+  // convention for consistency and are the canonical enum values fed to Gemini's
+  // structured output schema.
+  // ═══════════════════════════════════════════════════════════════════════
+
+  // ─── Wheat (گندم) ──────────────────────────────────────────────────────
+  'Wheat___Leaf_rust': {
+    crop_type_slug: 'wheat',
+    crop_name_en: 'Wheat',
+    crop_name_ur: 'گندم',
+    disease_slug: 'wheat_leaf_rust',
+    disease_name_en: 'Leaf Rust (Brown Rust)',
+    disease_name_ur: 'پتوں کا زنگ (براؤن رسٹ)',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Wheat___Yellow_rust': {
+    crop_type_slug: 'wheat',
+    crop_name_en: 'Wheat',
+    crop_name_ur: 'گندم',
+    disease_slug: 'wheat_yellow_rust',
+    disease_name_en: 'Yellow Rust (Stripe Rust)',
+    disease_name_ur: 'پیلا زنگ (اسٹرائپ رسٹ)',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Wheat___Stem_rust': {
+    crop_type_slug: 'wheat',
+    crop_name_en: 'Wheat',
+    crop_name_ur: 'گندم',
+    disease_slug: 'wheat_stem_rust',
+    disease_name_en: 'Stem Rust (Black Rust)',
+    disease_name_ur: 'تنے کا زنگ (کالا زنگ)',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Wheat___Spot_blotch': {
+    crop_type_slug: 'wheat',
+    crop_name_en: 'Wheat',
+    crop_name_ur: 'گندم',
+    disease_slug: 'wheat_spot_blotch',
+    disease_name_en: 'Spot Blotch',
+    disease_name_ur: 'داغ دار جھلساؤ',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Wheat___Septoria_leaf_blotch': {
+    crop_type_slug: 'wheat',
+    crop_name_en: 'Wheat',
+    crop_name_ur: 'گندم',
+    disease_slug: 'wheat_septoria_leaf_blotch',
+    disease_name_en: 'Septoria Leaf Blotch',
+    disease_name_ur: 'سیپٹوریا پتوں کے دھبے',
+    default_severity: 'moderate',
+    is_healthy: false,
+  },
+  'Wheat___Powdery_mildew': {
+    crop_type_slug: 'wheat',
+    crop_name_en: 'Wheat',
+    crop_name_ur: 'گندم',
+    disease_slug: 'wheat_powdery_mildew',
+    disease_name_en: 'Powdery Mildew',
+    disease_name_ur: 'پاؤڈری پھپھوندی',
+    default_severity: 'moderate',
+    is_healthy: false,
+  },
+  'Wheat___Fusarium_head_blight': {
+    crop_type_slug: 'wheat',
+    crop_name_en: 'Wheat',
+    crop_name_ur: 'گندم',
+    disease_slug: 'wheat_fusarium_head_blight',
+    disease_name_en: 'Fusarium Head Blight',
+    disease_name_ur: 'فوزیریم بالی جھلساؤ',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Wheat___healthy': {
+    crop_type_slug: 'wheat',
+    crop_name_en: 'Wheat',
+    crop_name_ur: 'گندم',
+    disease_slug: 'healthy',
+    disease_name_en: 'Healthy',
+    disease_name_ur: 'صحت مند',
+    default_severity: 'healthy',
+    is_healthy: true,
+  },
+
+  // ─── Cotton (کپاس) ─────────────────────────────────────────────────────
+  'Cotton___Cotton_leaf_curl_virus': {
+    crop_type_slug: 'cotton',
+    crop_name_en: 'Cotton',
+    crop_name_ur: 'کپاس',
+    disease_slug: 'cotton_leaf_curl_virus',
+    disease_name_en: 'Cotton Leaf Curl Virus (CLCuV)',
+    disease_name_ur: 'کاٹن لیف کرل وائرس',
+    default_severity: 'urgent',
+    is_healthy: false,
+  },
+  'Cotton___Bacterial_blight': {
+    crop_type_slug: 'cotton',
+    crop_name_en: 'Cotton',
+    crop_name_ur: 'کپاس',
+    disease_slug: 'cotton_bacterial_blight',
+    disease_name_en: 'Bacterial Blight (Angular Leaf Spot)',
+    disease_name_ur: 'بیکٹیریل جھلساؤ (کونیی پتہ دھبہ)',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Cotton___Boll_rot': {
+    crop_type_slug: 'cotton',
+    crop_name_en: 'Cotton',
+    crop_name_ur: 'کپاس',
+    disease_slug: 'cotton_boll_rot',
+    disease_name_en: 'Boll Rot',
+    disease_name_ur: 'بول گلا سڑ',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Cotton___Root_rot': {
+    crop_type_slug: 'cotton',
+    crop_name_en: 'Cotton',
+    crop_name_ur: 'کپاس',
+    disease_slug: 'cotton_root_rot',
+    disease_name_en: 'Root Rot',
+    disease_name_ur: 'جڑوں کی گلن',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Cotton___Verticillium_wilt': {
+    crop_type_slug: 'cotton',
+    crop_name_en: 'Cotton',
+    crop_name_ur: 'کپاس',
+    disease_slug: 'cotton_verticillium_wilt',
+    disease_name_en: 'Verticillium Wilt',
+    disease_name_ur: 'ورٹیسیلیم مرجھاؤ',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Cotton___Alternaria_leaf_spot': {
+    crop_type_slug: 'cotton',
+    crop_name_en: 'Cotton',
+    crop_name_ur: 'کپاس',
+    disease_slug: 'cotton_alternaria_leaf_spot',
+    disease_name_en: 'Alternaria Leaf Spot',
+    disease_name_ur: 'الٹرنیریا پتہ دھبہ',
+    default_severity: 'moderate',
+    is_healthy: false,
+  },
+  'Cotton___healthy': {
+    crop_type_slug: 'cotton',
+    crop_name_en: 'Cotton',
+    crop_name_ur: 'کپاس',
+    disease_slug: 'healthy',
+    disease_name_en: 'Healthy',
+    disease_name_ur: 'صحت مند',
+    default_severity: 'healthy',
+    is_healthy: true,
+  },
+
+  // ─── Rice / Paddy (چاول) ──────────────────────────────────────────────
+  'Rice___Blast_disease': {
+    crop_type_slug: 'rice',
+    crop_name_en: 'Rice',
+    crop_name_ur: 'چاول',
+    disease_slug: 'rice_blast_disease',
+    disease_name_en: 'Blast Disease',
+    disease_name_ur: 'بلاسٹ بیماری (پتہ/گلہوّا جھلساؤ)',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Rice___Bacterial_leaf_blight': {
+    crop_type_slug: 'rice',
+    crop_name_en: 'Rice',
+    crop_name_ur: 'چاول',
+    disease_slug: 'rice_bacterial_leaf_blight',
+    disease_name_en: 'Bacterial Leaf Blight',
+    disease_name_ur: 'بیکٹیریل پتہ جھلساؤ',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Rice___Sheath_blight': {
+    crop_type_slug: 'rice',
+    crop_name_en: 'Rice',
+    crop_name_ur: 'چاول',
+    disease_slug: 'rice_sheath_blight',
+    disease_name_en: 'Sheath Blight',
+    disease_name_ur: 'شیٹھ جھلساؤ',
+    default_severity: 'moderate',
+    is_healthy: false,
+  },
+  'Rice___Brown_spot': {
+    crop_type_slug: 'rice',
+    crop_name_en: 'Rice',
+    crop_name_ur: 'چاول',
+    disease_slug: 'rice_brown_spot',
+    disease_name_en: 'Brown Spot',
+    disease_name_ur: 'براون دھبہ',
+    default_severity: 'moderate',
+    is_healthy: false,
+  },
+  'Rice___False_smut': {
+    crop_type_slug: 'rice',
+    crop_name_en: 'Rice',
+    crop_name_ur: 'چاول',
+    disease_slug: 'rice_false_smut',
+    disease_name_en: 'False Smut',
+    disease_name_ur: 'فالس اسمت (جھوٹی گند)',
+    default_severity: 'moderate',
+    is_healthy: false,
+  },
+  'Rice___healthy': {
+    crop_type_slug: 'rice',
+    crop_name_en: 'Rice',
+    crop_name_ur: 'چاول',
+    disease_slug: 'healthy',
+    disease_name_en: 'Healthy',
+    disease_name_ur: 'صحت مند',
+    default_severity: 'healthy',
+    is_healthy: true,
+  },
+
+  // ─── Sugarcane (گنا) ──────────────────────────────────────────────────
+  'Sugarcane___Red_rot': {
+    crop_type_slug: 'sugarcane',
+    crop_name_en: 'Sugarcane',
+    crop_name_ur: 'گنا',
+    disease_slug: 'sugarcane_red_rot',
+    disease_name_en: 'Red Rot',
+    disease_name_ur: 'ریڈ روٹ (گنا سرخ سڑن)',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Sugarcane___Whip_smut': {
+    crop_type_slug: 'sugarcane',
+    crop_name_en: 'Sugarcane',
+    crop_name_ur: 'گنا',
+    disease_slug: 'sugarcane_whip_smut',
+    disease_name_en: 'Whip Smut',
+    disease_name_ur: 'وہپ اسمت (کوڑا نما گند)',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Sugarcane___Rust_disease': {
+    crop_type_slug: 'sugarcane',
+    crop_name_en: 'Sugarcane',
+    crop_name_ur: 'گنا',
+    disease_slug: 'sugarcane_rust_disease',
+    disease_name_en: 'Rust Disease',
+    disease_name_ur: 'گنے کا زنگ',
+    default_severity: 'moderate',
+    is_healthy: false,
+  },
+  'Sugarcane___Pokkah_boeng': {
+    crop_type_slug: 'sugarcane',
+    crop_name_en: 'Sugarcane',
+    crop_name_ur: 'گنا',
+    disease_slug: 'sugarcane_pokkah_boeng',
+    disease_name_en: 'Pokkah Boeng',
+    disease_name_ur: 'پوکہ بونگ (پتے مڑھاؤ بیماری)',
+    default_severity: 'moderate',
+    is_healthy: false,
+  },
+  'Sugarcane___healthy': {
+    crop_type_slug: 'sugarcane',
+    crop_name_en: 'Sugarcane',
+    crop_name_ur: 'گنا',
+    disease_slug: 'healthy',
+    disease_name_en: 'Healthy',
+    disease_name_ur: 'صحت مند',
+    default_severity: 'healthy',
+    is_healthy: true,
+  },
+
+  // ─── Onion (پیاز) ─────────────────────────────────────────────────────
+  // NOTE: "Black Mold" (Aspergillus niger) intentionally excluded here.
+  // It is a real, globally documented onion pathogen, but it did NOT surface
+  // as a Pakistan-specific priority disease in the sources checked (DAWN.com's
+  // Pakistan-focused writeup names downy mildew, purple blotch, grey mold, and
+  // basal/pink rot as the four most destructive). Re-add only after a direct
+  // Pakistan-specific source confirms field relevance — do not restore from
+  // memory or a second AI-generated list.
+  'Onion___Downy_mildew': {
+    crop_type_slug: 'onion',
+    crop_name_en: 'Onion',
+    crop_name_ur: 'پیاز',
+    disease_slug: 'onion_downy_mildew',
+    disease_name_en: 'Downy Mildew',
+    disease_name_ur: 'ڈاؤنی پھپھوندی',
+    default_severity: 'moderate',
+    is_healthy: false,
+  },
+  'Onion___Purple_blotch': {
+    crop_type_slug: 'onion',
+    crop_name_en: 'Onion',
+    crop_name_ur: 'پیاز',
+    disease_slug: 'onion_purple_blotch',
+    disease_name_en: 'Purple Blotch',
+    disease_name_ur: 'ارغوانی دھبہ بیماری',
+    default_severity: 'moderate',
+    is_healthy: false,
+  },
+  'Onion___Grey_mold': {
+    crop_type_slug: 'onion',
+    crop_name_en: 'Onion',
+    crop_name_ur: 'پیاز',
+    disease_slug: 'onion_grey_mold',
+    disease_name_en: 'Grey Mold (Neck Rot)',
+    disease_name_ur: 'گرے مولڈ (گردن کی سڑن)',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Onion___Basal_rot': {
+    crop_type_slug: 'onion',
+    crop_name_en: 'Onion',
+    crop_name_ur: 'پیاز',
+    disease_slug: 'onion_basal_rot',
+    disease_name_en: 'Basal Rot (Pink Rot)',
+    disease_name_ur: 'جڑ یا نچلی سڑن (پنک روٹ)',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Onion___healthy': {
+    crop_type_slug: 'onion',
+    crop_name_en: 'Onion',
+    crop_name_ur: 'پیاز',
+    disease_slug: 'healthy',
+    disease_name_en: 'Healthy',
+    disease_name_ur: 'صحت مند',
+    default_severity: 'healthy',
+    is_healthy: true,
+  },
+
+  // ─── Mango (آم) ───────────────────────────────────────────────────────
+  'Mango___Anthracnose': {
+    crop_type_slug: 'mango',
+    crop_name_en: 'Mango',
+    crop_name_ur: 'آم',
+    disease_slug: 'mango_anthracnose',
+    disease_name_en: 'Anthracnose',
+    disease_name_ur: 'اینٹھراکنوز (دھبہ/سڑن بیماری)',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Mango___Powdery_mildew': {
+    crop_type_slug: 'mango',
+    crop_name_en: 'Mango',
+    crop_name_ur: 'آم',
+    disease_slug: 'mango_powdery_mildew',
+    disease_name_en: 'Powdery Mildew',
+    disease_name_ur: 'پاؤڈری پھپھوندی',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Mango___Bacterial_black_spot': {
+    crop_type_slug: 'mango',
+    crop_name_en: 'Mango',
+    crop_name_ur: 'آم',
+    disease_slug: 'mango_bacterial_black_spot',
+    disease_name_en: 'Bacterial Black Spot',
+    disease_name_ur: 'بیکٹیریل کالا دھبہ',
+    default_severity: 'moderate',
+    is_healthy: false,
+  },
+  'Mango___Dieback': {
+    crop_type_slug: 'mango',
+    crop_name_en: 'Mango',
+    crop_name_ur: 'آم',
+    disease_slug: 'mango_dieback',
+    disease_name_en: 'Dieback',
+    disease_name_ur: 'ڈائبیک (شاخوں کا سوکھ جانا)',
+    default_severity: 'high',
+    is_healthy: false,
+  },
+  'Mango___Malformation': {
+    crop_type_slug: 'mango',
+    crop_name_en: 'Mango',
+    crop_name_ur: 'آم',
+    disease_slug: 'mango_malformation',
+    disease_name_en: 'Mango Malformation',
+    disease_name_ur: 'آم کی بگاڑ بیماری',
+    default_severity: 'moderate',
+    is_healthy: false,
+  },
+  'Mango___Sudden_death_syndrome': {
+    crop_type_slug: 'mango',
+    crop_name_en: 'Mango',
+    crop_name_ur: 'آم',
+    disease_slug: 'mango_sudden_death_syndrome',
+    disease_name_en: 'Mango Sudden Death Syndrome (MSDS)',
+    disease_name_ur: 'آم اچانک مرجھاؤ/موت سنڈروم',
+    default_severity: 'urgent',
+    is_healthy: false,
+  },
+  'Mango___healthy': {
+    crop_type_slug: 'mango',
+    crop_name_en: 'Mango',
+    crop_name_ur: 'آم',
+    disease_slug: 'healthy',
+    disease_name_en: 'Healthy',
+    disease_name_ur: 'صحت مند',
+    default_severity: 'healthy',
+    is_healthy: true,
+  },
 };
 
 /**
@@ -468,4 +884,56 @@ export function buildFallbackMapping(hfLabel: string): LabelMapping {
     default_severity: isHealthy ? 'healthy' : 'moderate',
     is_healthy: isHealthy,
   };
+}
+
+/**
+ * Returns every disease_slug in the taxonomy as a flat array.
+ * Use this to build the Gemini structured-output enum constraint —
+ * Gemini must only ever return one of these values, never invent new ones.
+ */
+export function getAllDiseaseSlugs(): string[] {
+  const slugs = new Set<string>();
+  for (const mapping of Object.values(LABEL_MAP)) {
+    slugs.add(mapping.disease_slug);
+  }
+  return Array.from(slugs);
+}
+
+/**
+ * Returns every crop_type_slug in the taxonomy as a flat array.
+ * Use this to build the Gemini structured-output enum constraint for crop
+ * identification, and to validate that a scanned crop is one FasalGuard
+ * actually supports before running full disease classification.
+ */
+export function getAllCropSlugs(): string[] {
+  const slugs = new Set<string>();
+  for (const mapping of Object.values(LABEL_MAP)) {
+    slugs.add(mapping.crop_type_slug);
+  }
+  return Array.from(slugs);
+}
+
+/**
+ * Find a mapping by its disease_slug value directly (e.g. "wheat_yellow_rust"),
+ * as opposed to resolveLabel() which expects the original HuggingFace-style
+ * "Crop___Disease" key format.
+ *
+ * Used by the Gemini route: Gemini's structured output returns disease_slug
+ * values directly (constrained via getAllDiseaseSlugs()), so this is the
+ * correct reverse lookup to convert that back into a full bilingual mapping.
+ *
+ * "healthy" is a shared slug across every crop, so when looking up a healthy
+ * result you MUST also pass cropSlug to disambiguate which crop's healthy
+ * entry to return.
+ */
+export function findMappingByDiseaseSlug(
+  diseaseSlug: string,
+  cropSlug?: string,
+): LabelMapping | null {
+  const allMappings = Object.values(LABEL_MAP);
+  return (
+    allMappings.find(
+      (m) => m.disease_slug === diseaseSlug && (cropSlug ? m.crop_type_slug === cropSlug : true),
+    ) ?? null
+  );
 }
