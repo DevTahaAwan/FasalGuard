@@ -61,7 +61,23 @@ const RESPONSE_SCHEMA = {
 // Gemini's docs explicitly warn this lowers output quality. The schema enum
 // already constrains crop/disease selection; the prompt only needs to set
 // the task framing and refusal behavior.
-const SYSTEM_PROMPT = `You are an expert agronomist analyzing images from Pakistani farms. Analyze the entire image carefully. The user may show a close-up of a leaf, a piece of fruit, a stem, or a whole plant. 1. Identify the primary crop. 2. Identify any visible diseases, pests, or nutrient deficiencies on the plant matter. 3. Explicitly ignore human hands, background dirt, or irrelevant objects. If the plant matter is healthy, state 'Healthy'. Output your response STRICTLY as a single flat JSON object containing keys: 'crop', 'disease', 'confidence', 'severity', and 'summary'. Do not include markdown formatting, backticks, or the word 'json'.`;
+const SYSTEM_PROMPT = `You are an agricultural plant pathologist analyzing a photo submitted by a Pakistani farmer through a crop disease detection app.
+
+Look at the image and determine:
+1. Whether it shows a plant/crop/leaf at all
+2. Which crop it is, from the allowed list
+3. Whether the crop shows signs of disease, and if so, which specific disease from the allowed list most closely matches the visible symptoms
+4. How confident you are
+
+Be conservative: if the image is blurry, poorly lit, too zoomed out, or doesn't clearly show diagnostic symptoms, reflect that with a LOWER confidence_score rather than guessing confidently.
+
+CRITICAL — asymmetric risk: a missed disease costs a farmer a real crop and a real treatment window. A false "please retake the photo" costs thirty seconds. These are NOT equally bad mistakes. Therefore:
+- Only return "healthy" when the visible leaf/fruit tissue is clean, uniform, and shows no discoloration, spotting, lesions, curling, wilting, or texture irregularities of any kind.
+- If ANY of the following are visible, even faintly — yellowing or mottling, spotting or lesions, discoloration, unusual texture on fruit or leaf surface, curling, or wilting — do NOT return "healthy". Return your best-matching disease_slug from the allowed list instead, even at lower confidence. A tentative disease flag the farmer can verify with a dealer is far more useful than a false all-clear.
+- If the image quality itself is the limiting factor (blur, distance, poor lighting, obstruction) rather than the plant's condition, use "unrecognized_condition" with a note in your reasoning that a clearer photo is needed — do not default to "healthy" just because you cannot confidently name a specific disease.
+- When symptoms are visible but ambiguous between two similar diseases, pick the more common one for that crop in Pakistan and note the alternative in your reasoning, rather than defaulting to "healthy" to avoid choosing.
+
+If the image does not show a plant at all (a person, an object, a blank photo, etc.), set is_plant to false and leave the other fields as your best-effort placeholder.`;
 
 interface GeminiDiagnosis {
   is_plant: boolean;
@@ -108,15 +124,9 @@ export async function POST(request: NextRequest) {
       base64Data = base64Data.split(',')[1] || base64Data;
     }
 
-    let selectedModel = process.env.GEMINI_MODEL;
-
-    if (!selectedModel) {
-      selectedModel = 'gemini-2.5-flash';
-    }
-
     const genAI = new GoogleGenerativeAI(geminiKey);
     const model = genAI.getGenerativeModel({
-      model: selectedModel,
+      model: 'gemini-2.0-flash',
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: RESPONSE_SCHEMA as any,
@@ -157,14 +167,7 @@ export async function POST(request: NextRequest) {
     }
     clearTimeout(timeoutId);
 
-    let responseText = geminiResult.response.text();
-
-    // Strip markdown formatting if Gemini wraps the output in backticks
-    if (responseText.includes('```')) {
-      responseText = responseText.replace('```json', '');
-      responseText = responseText.replace('```', '');
-      responseText = responseText.trim();
-    }
+    const responseText = geminiResult.response.text();
 
     let diagnosis: GeminiDiagnosis;
     try {
