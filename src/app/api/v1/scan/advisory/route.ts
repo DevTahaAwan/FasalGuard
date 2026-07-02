@@ -7,7 +7,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+let selectedModel = process.env.GEMINI_MODEL;
+
+if (!selectedModel) {
+  selectedModel = 'gemini-2.5-flash';
+}
+
+const GEMINI_API_BASE = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent`;
+
 
 interface AdvisoryRequestBody {
   scan_id: string;
