@@ -118,9 +118,15 @@ export async function POST(request: NextRequest) {
       base64Data = base64Data.split(',')[1] || base64Data;
     }
 
+    let selectedModel = process.env.GEMINI_MODEL;
+
+    if (!selectedModel) {
+      selectedModel = 'gemini-2.5-flash';
+    }
+
     const genAI = new GoogleGenerativeAI(geminiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: selectedModel,
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: RESPONSE_SCHEMA as any,
