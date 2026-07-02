@@ -1,4 +1,4 @@
-'use client';
+ 'use client';
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -97,10 +97,38 @@ export default function DiagnosisPage() {
   }
 
   const handleShare = () => {
-    const diseaseName = analyzeResult ? analyzeResult.disease_name_en : 'Unknown';
-    const cropName = analyzeResult ? analyzeResult.crop_name_en : 'Unknown';
-    const summaryText = advisoryResult ? advisoryResult.disease_summary : '';
-    const shareText = 'FasalGuard Diagnosis\nCrop: ' + cropName + '\nDisease: ' + diseaseName + '\n' + summaryText;
+    const crop = analyzeResult?.crop_name_en || 'Unknown';
+    const isHealthy = analyzeResult?.is_healthy || advisoryResult?.advisory_type === 'healthy_confirmation';
+    const disease = isHealthy ? 'Healthy' : (analyzeResult?.disease_name_en || 'Unknown');
+    const severity = analyzeResult?.severity || 'Unknown';
+    const summary = advisoryResult?.disease_summary || '';
+
+    let shareText = `🌱 *FasalGuard Crop Report* 🌱\n`;
+    shareText += `---------------------------\n`;
+    shareText += `🌾 *Crop:* ${crop}\n`;
+
+    if (disease === 'Healthy' || disease === 'None') {
+      shareText += `✅ *Diagnosis:* Healthy\n`;
+      shareText += `\n${summary}\n`;
+    } else {
+      shareText += `🦠 *Diagnosis:* ${disease}\n`;
+      shareText += `⚠️ *Severity:* ${severity}\n`;
+      shareText += `\n📋 *Summary:*\n${summary}\n`;
+      
+      if (advisoryResult && advisoryResult.products && advisoryResult.products.length > 0) {
+        shareText += `\n💊 *Recommended Treatment:*\n`;
+        // Use a simple for loop to list treatments
+        for (let i = 0; i < advisoryResult.products.length; i++) {
+          const product = advisoryResult.products[i];
+          if (product) {
+            shareText += `- ${product.name} (${product.dosage})\n`;
+          }
+        }
+      }
+    }
+
+    shareText += `\n---------------------------\n`;
+    shareText += `🔍 *Diagnosed by FasalGuard AI*`;
 
     if (navigator.share) {
       navigator.share({ title: 'FasalGuard Diagnosis', text: shareText });
