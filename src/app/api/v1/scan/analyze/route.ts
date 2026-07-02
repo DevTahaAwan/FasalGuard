@@ -107,10 +107,12 @@ export async function POST(request: NextRequest) {
     }
 
     const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) {
-      console.error('GEMINI_API_KEY is not set');
+    const geminiModel = process.env.GEMINI_MODEL;
+
+    if (!geminiKey || !geminiModel) {
+      console.error('GEMINI_API_KEY or GEMINI_MODEL is not set');
       return NextResponse.json(
-        { error: 'API Key Missing', message: 'GEMINI_API_KEY is not configured on the server.' },
+        { error: 'Configuration Missing', message: 'GEMINI_API_KEY or GEMINI_MODEL is not configured on the server.' },
         { status: 500 },
       );
     }
@@ -126,11 +128,11 @@ export async function POST(request: NextRequest) {
 
     const genAI = new GoogleGenerativeAI(geminiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: geminiModel,
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: RESPONSE_SCHEMA as any,
-        temperature: 0.2, // low temperature: we want consistent classification, not creativity
+        temperature: 0.1, // low temperature: we want consistent classification, not creativity
       },
     });
 

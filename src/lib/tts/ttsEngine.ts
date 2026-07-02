@@ -1,7 +1,4 @@
 // 2-Tier TTS Engine — Web Speech API → Google Cloud TTS fallback
-// Per user decision: removed Kokoro ONNX (too large for 3G), using GCloud TTS as Tier 2.
-// Tier 1: Web Speech API (free, instant, device-native — works on most Android Chrome)
-// Tier 2: /api/v1/tts/synthesize → Google Cloud TTS API (Urdu: ur-PK-Standard-A)
 
 import type { Language } from '@/types/api';
 
@@ -14,8 +11,6 @@ let currentAudio: HTMLAudioElement | null = null;
 
 /**
  * Check if Web Speech API supports the given language.
- * On most Android Chrome devices, Urdu (ur-PK) is available.
- * This is a best-effort check — actual support varies by device.
  */
 function isSpeechApiAvailable(language: Language): boolean {
   if (typeof window === 'undefined' || !window.speechSynthesis) return false;
@@ -23,14 +18,14 @@ function isSpeechApiAvailable(language: Language): boolean {
   const langTag = language === 'ur' ? 'ur-PK' : 'en-PK';
   const voices = window.speechSynthesis.getVoices();
 
-  // If no voices loaded yet, assume available and let it try
+
   if (voices.length === 0) return true;
 
   return voices.some(
     (v) =>
       v.lang === langTag ||
       v.lang.startsWith(language) ||
-      // Fallback: any available voice
+
       (language === 'en' && v.lang.startsWith('en'))
   );
 }
@@ -52,7 +47,6 @@ function playWithSpeechApi(
   utterance.pitch = 1.0;
   utterance.volume = 1.0;
 
-  // Explicitly loop through available voices to find the best match
   const voices = window.speechSynthesis.getVoices();
   let selectedVoice = voices.find(v => v.lang === 'ur-PK');
 
@@ -160,9 +154,7 @@ export interface PlayOptions {
 }
 
 /**
- * Play TTS using the 2-tier fallback chain:
- * Tier 1 → Web Speech API (instant, free, works offline)
- * Tier 2 → Google Cloud TTS (fallback when Urdu voice unavailable)
+ * Play TTS using the 2-tier fallback chain.
  */
 export async function playTTS(options: PlayOptions): Promise<void> {
   const {

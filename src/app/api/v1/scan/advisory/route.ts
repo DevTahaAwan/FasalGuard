@@ -7,13 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-let selectedModel = process.env.GEMINI_MODEL;
 
-if (!selectedModel) {
-  selectedModel = 'gemini-2.5-flash';
-}
-
-const GEMINI_API_BASE = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent`;
 
 
 interface AdvisoryRequestBody {
@@ -94,13 +88,17 @@ export async function POST(request: NextRequest) {
     }
 
     const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) {
-      console.error('GEMINI_API_KEY is not set');
+    const geminiModel = process.env.GEMINI_MODEL;
+
+    if (!geminiKey || !geminiModel) {
+      console.error('GEMINI_API_KEY or GEMINI_MODEL is not set');
       return NextResponse.json(
-        { success: false, error: { code: 'CONFIG_ERROR', message: 'Gemini API key not configured', message_ur: 'سرور کی ترتیب میں خرابی' } },
+        { success: false, error: { code: 'CONFIG_ERROR', message: 'Gemini configuration (API key or model) missing', message_ur: 'سرور کی ترتیب میں خرابی' } },
         { status: 500 },
       );
     }
+
+    const GEMINI_API_BASE = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`;
 
     const prompt = buildPrompt(body);
 
