@@ -28,6 +28,7 @@ export default function ScannerPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [flashSupported, setFlashSupported] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
@@ -199,6 +200,86 @@ export default function ScannerPage() {
       console.error('handleCapture error:', outerErr);
       setError('UNKNOWN', outerErr.message || 'Something went wrong. Please try scanning again.');
     }
+  };
+
+  const handleGallerySelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      setCapturedImage(dataUrl);
+      stopCamera();
+      setAnalyzing();
+
+      try {
+        const MAX_RETRIES = 2;
+        let lastError = '';
+        let lastErrorCode = '';
+        let succeeded = false;
+
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+          let res: Response | null = null;
+
+          try {
+            res = await fetch('/api/v1/scan/analyze', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ image: dataUrl, language }),
+            });
+          } catch (fetchErr: any) {
+            lastError = fetchErr.message || 'Network error';
+            lastErrorCode = 'NETWORK_ERROR';
+            if (attempt < MAX_RETRIES - 1) {
+              await new Promise((resolve) => setTimeout(resolve, 1500));
+              continue;
+            }
+            break;
+          }
+
+          if (!res.ok) {
+            try {
+              const errJson = await res.json();
+              lastErrorCode = errJson?.error?.code || String(res.status);
+              lastError = errJson?.error?.message || errJson?.message || 'Classification failed';
+            } catch {
+              lastErrorCode = String(res.status);
+              lastError = 'Classification failed';
+            }
+            break;
+          }
+
+          let json: any = null;
+          try {
+            json = await res.json();
+          } catch {
+            lastError = 'Invalid response from server';
+            lastErrorCode = 'PARSE_ERROR';
+            break;
+          }
+
+          if (!json.success) {
+            lastErrorCode = json?.error?.code || 'UNKNOWN';
+            lastError = json?.message || json?.error?.message || 'Classification failed';
+            break;
+          }
+
+          setAnalyzeResult(json.data);
+          router.push(`/diagnosis/${json.data.scan_id}`);
+          succeeded = true;
+          break;
+        }
+
+        if (!succeeded) {
+          setError((lastErrorCode as ScanErrorCode) || 'UNKNOWN', lastError || 'Something went wrong. Please try again.');
+        }
+      } catch (outerErr: any) {
+        console.error('handleGallerySelect error:', outerErr);
+        setError('UNKNOWN', outerErr.message || 'Something went wrong. Please try again.');
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleClose = () => {
@@ -386,7 +467,7 @@ export default function ScannerPage() {
                     display: 'inline-block',
                   }}
                 >
-                  {isRTL ? 'پتے کی تصویر لیں' : 'Point at a leaf'}
+                  {isRTL ? 'پتے یا پھل پر کیمرہ رکھیں' : 'Point at a leaf or fruit'}
                 </div>
               </div>
             )}
@@ -400,9 +481,17 @@ export default function ScannerPage() {
           <div className="shutter" onClick={handleCapture} role="button">
             <div className="shutter-inner"></div>
           </div>
-          <div className="cam-side-btn">
+          <div className="cam-side-btn" onClick={() => galleryInputRef.current && galleryInputRef.current.click()}>
             <ImageIcon color="rgba(255,255,255,0.8)" size={20} />
           </div>
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*"
+            id="gallery-input"
+            style={{ display: 'none' }}
+            onChange={handleGallerySelect}
+          />
         </div>
       </div>
     </AppLayout>

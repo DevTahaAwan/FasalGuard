@@ -61,17 +61,7 @@ const RESPONSE_SCHEMA = {
 // Gemini's docs explicitly warn this lowers output quality. The schema enum
 // already constrains crop/disease selection; the prompt only needs to set
 // the task framing and refusal behavior.
-const SYSTEM_PROMPT = `You are an agricultural plant pathologist analyzing a photo submitted by a Pakistani farmer through a crop disease detection app.
-
-Look at the image and determine:
-1. Whether it shows a plant/crop/leaf at all
-2. Which crop it is, from the allowed list
-3. Whether the crop shows signs of disease, and if so, which specific disease from the allowed list most closely matches the visible symptoms
-4. How confident you are
-
-Be conservative: if the image is blurry, poorly lit, too zoomed out, or doesn't clearly show diagnostic symptoms, reflect that with a LOWER confidence_score rather than guessing confidently. Do not force-fit ambiguous symptoms into a disease label if "healthy" or "unrecognized_condition" is a more honest answer.
-
-If the image does not show a plant at all (a person, an object, a blank photo, etc.), set is_plant to false and leave the other fields as your best-effort placeholder.`;
+const SYSTEM_PROMPT = `You are an expert agronomist analyzing images from Pakistani farms. Analyze the entire image carefully. The user may show a close-up of a leaf, a piece of fruit, a stem, or a whole plant. 1. Identify the primary crop. 2. Identify any visible diseases, pests, or nutrient deficiencies on the plant matter. 3. Explicitly ignore human hands, background dirt, or irrelevant objects. If the plant matter is healthy, state 'Healthy'. Output your response STRICTLY as a single flat JSON object containing keys: 'crop', 'disease', 'confidence', 'severity', and 'summary'. Do not include markdown formatting, backticks, or the word 'json'.`;
 
 interface GeminiDiagnosis {
   is_plant: boolean;
@@ -167,7 +157,14 @@ export async function POST(request: NextRequest) {
     }
     clearTimeout(timeoutId);
 
-    const responseText = geminiResult.response.text();
+    let responseText = geminiResult.response.text();
+
+    // Strip markdown formatting if Gemini wraps the output in backticks
+    if (responseText.includes('```')) {
+      responseText = responseText.replace('```json', '');
+      responseText = responseText.replace('```', '');
+      responseText = responseText.trim();
+    }
 
     let diagnosis: GeminiDiagnosis;
     try {

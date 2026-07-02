@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, MapPin, Phone, Navigation } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -25,6 +25,18 @@ export default function DealersPage() {
     queryFn: fetchDealers,
   });
 
+  const [mapUrl, setMapUrl] = useState('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((position) => {
+        const { latitude, longitude } = position.coords;
+        const bbox = `${longitude - 0.05},${latitude - 0.05},${longitude + 0.05},${latitude + 0.05}`;
+        setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${latitude},${longitude}`);
+      });
+    }
+  }, []);
+
   return (
     <AppLayout>
       <div className="screen active" id="screen-dealers">
@@ -37,10 +49,23 @@ export default function DealersPage() {
         </div>
 
         <div className="scroll-content" style={{ paddingTop: '20px' }}>
-          <div className="map-placeholder">
-            <MapPin size={36} color="var(--green-accent)" />
-            <span>{isRTL ? 'نقشہ لوڈ ہو رہا ہے...' : 'Loading map...'}</span>
-          </div>
+          {mapUrl ? (
+            <iframe
+              width="100%"
+              height="200"
+              frameBorder="0"
+              scrolling="no"
+              marginHeight={0}
+              marginWidth={0}
+              src={mapUrl}
+              style={{ border: '1px solid #e5e7eb', borderRadius: '12px', marginBottom: '16px' }}
+            ></iframe>
+          ) : (
+            <div className="map-placeholder">
+              <MapPin size={36} color="var(--green-accent)" />
+              <span>{isRTL ? 'نقشہ لوڈ ہو رہا ہے...' : 'Loading map...'}</span>
+            </div>
+          )}
 
           {isLoading ? (
             <p>Loading...</p>

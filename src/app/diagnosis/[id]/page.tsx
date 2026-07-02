@@ -25,7 +25,7 @@ const CROP_ICONS: Record<string, string> = {
 export default function DiagnosisPage() {
   const router = useRouter();
   const { language } = useAppStore();
-  const { analyzeResult, advisoryResult, setAdvisoryResult, phase } = useScanStore();
+  const { analyzeResult, advisoryResult, setAdvisoryResult, phase, capturedImageDataUrl } = useScanStore();
   const [loading, setLoading] = useState(true);
 
   const isRTL = language === 'ur';
@@ -82,6 +82,32 @@ export default function DiagnosisPage() {
 
     return () => { cancelled = true; };
   }, [advisoryResult, analyzeResult, setAdvisoryResult, language]);
+
+  // Save captured image to localStorage so it persists across renders
+  useEffect(() => {
+    if (capturedImageDataUrl) {
+      localStorage.setItem('last_scan_img', capturedImageDataUrl);
+    }
+  }, [capturedImageDataUrl]);
+
+  // Read image from localStorage as fallback if Zustand state was cleared
+  let displayImage = capturedImageDataUrl;
+  if (!displayImage) {
+    displayImage = localStorage.getItem('last_scan_img');
+  }
+
+  const handleShare = () => {
+    const diseaseName = analyzeResult ? analyzeResult.disease_name_en : 'Unknown';
+    const cropName = analyzeResult ? analyzeResult.crop_name_en : 'Unknown';
+    const summaryText = advisoryResult ? advisoryResult.disease_summary : '';
+    const shareText = 'FasalGuard Diagnosis\nCrop: ' + cropName + '\nDisease: ' + diseaseName + '\n' + summaryText;
+
+    if (navigator.share) {
+      navigator.share({ title: 'FasalGuard Diagnosis', text: shareText });
+    } else {
+      window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(shareText));
+    }
+  };
 
   if (loading || phase !== 'complete' || !advisoryResult || !analyzeResult) {
     return (
@@ -152,6 +178,13 @@ export default function DiagnosisPage() {
           </button>
 
           <div className="info-card">
+            {displayImage && (
+              <img
+                src={displayImage}
+                alt="Scanned crop"
+                style={{ width: '100%', borderRadius: '12px', marginBottom: '12px', objectFit: 'cover', maxHeight: '200px' }}
+              />
+            )}
             <div className="info-card-title">{isRTL ? 'بیماری کی معلومات · Disease Info' : 'Disease Info · بیماری کی معلومات'}</div>
             <div className="info-card-body">
               {advisoryResult.disease_summary}
@@ -195,7 +228,7 @@ export default function DiagnosisPage() {
               <div className="action-btn-label">Find Dealer</div>
               <div className="action-btn-sub">قریبی دکان</div>
             </div>
-            <div className="action-btn">
+            <div className="action-btn" onClick={handleShare}>
               <div className="action-btn-icon" style={{ background: '#eff6ff' }}>
                 <Share2 color="#2563eb" size={18} />
               </div>

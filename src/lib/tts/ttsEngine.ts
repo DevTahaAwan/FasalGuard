@@ -42,23 +42,33 @@ function playWithSpeechApi(
   onEnd: () => void,
   onError: () => void
 ): void {
-  const utterance = new SpeechSynthesisUtterance(text);
+  if (!('speechSynthesis' in window)) {
+    onError();
+    return;
+  }
 
-  utterance.lang = language === 'ur' ? 'ur-PK' : 'en-PK';
-  utterance.rate = language === 'ur' ? 0.85 : 0.95; // Slightly slower for Urdu clarity
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = language === 'ur' ? 0.85 : 0.95;
   utterance.pitch = 1.0;
   utterance.volume = 1.0;
 
-  // Select best available voice
+  // Explicitly loop through available voices to find the best match
   const voices = window.speechSynthesis.getVoices();
-  const langTag = utterance.lang;
-  const preferredVoice =
-    voices.find((v) => v.lang === langTag) ??
-    voices.find((v) => v.lang.startsWith(language)) ??
-    null;
+  let selectedVoice = voices.find(v => v.lang === 'ur-PK');
 
-  if (preferredVoice) {
-    utterance.voice = preferredVoice;
+  if (!selectedVoice) {
+    selectedVoice = voices.find(v => v.lang.startsWith('ur'));
+  }
+
+  if (!selectedVoice) {
+    selectedVoice = voices.find(v => v.lang.startsWith('en'));
+  }
+
+  if (selectedVoice) {
+    utterance.voice = selectedVoice;
+    utterance.lang = selectedVoice.lang;
+  } else {
+    utterance.lang = language === 'ur' ? 'ur-PK' : 'en-US';
   }
 
   utterance.onstart = onStart;
