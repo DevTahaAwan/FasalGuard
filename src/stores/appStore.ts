@@ -4,6 +4,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Language } from '@/types/api';
 
+export type ThemeType = 'light' | 'dark' | 'sunlight';
+
 // ─── State Shape ──────────────────────────────────────────────────────────────
 
 interface AppState {
@@ -17,6 +19,8 @@ interface AppState {
   selectedCropSlugs: string[];
   // PWA install prompt event (stored for showing install UI)
   pwaInstallPromptAvailable: boolean;
+  // App Theme
+  theme: ThemeType;
 }
 
 interface AppActions {
@@ -27,6 +31,7 @@ interface AppActions {
   addCropSlug: (slug: string) => void;
   removeCropSlug: (slug: string) => void;
   setPwaInstallPromptAvailable: (available: boolean) => void;
+  setTheme: (theme: ThemeType) => void;
 }
 
 type AppStore = AppState & AppActions;
@@ -42,6 +47,7 @@ export const useAppStore = create<AppStore>()(
       scanInProgress: false,
       selectedCropSlugs: [],
       pwaInstallPromptAvailable: false,
+      theme: 'light',
 
       // Actions
       setLanguage: (language) => set({ language }),
@@ -60,14 +66,16 @@ export const useAppStore = create<AppStore>()(
         })),
       setPwaInstallPromptAvailable: (pwaInstallPromptAvailable) =>
         set({ pwaInstallPromptAvailable }),
+      setTheme: (theme) => set({ theme }),
     }),
     {
       name: 'fasalguard-app',
       storage: createJSONStorage(() => localStorage),
-      // Only persist language and crop selections — not transient UI state
+      // Only persist language, crop selections, and theme — not transient UI state
       partialize: (state) => ({
         language: state.language,
         selectedCropSlugs: state.selectedCropSlugs,
+        theme: state.theme,
       }),
     }
   )

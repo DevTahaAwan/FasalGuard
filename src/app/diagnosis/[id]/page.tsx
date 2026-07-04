@@ -97,38 +97,39 @@ export default function DiagnosisPage() {
   }
 
   const handleShare = () => {
-    const crop = analyzeResult?.crop_name_en || 'Unknown';
+    const cropEn = analyzeResult?.crop_name_en || 'Unknown';
+    const cropUr = analyzeResult?.crop_name_ur || 'نامعلوم';
+    
     const isHealthy = analyzeResult?.is_healthy || advisoryResult?.advisory_type === 'healthy_confirmation';
-    const disease = isHealthy ? 'Healthy' : (analyzeResult?.disease_name_en || 'Unknown');
-    const severity = analyzeResult?.severity || 'Unknown';
+    const diseaseEn = isHealthy ? 'Healthy' : (analyzeResult?.disease_name_en || 'Unknown');
+    const diseaseUr = isHealthy ? 'صحت مند' : (analyzeResult?.disease_name_ur || 'نامعلوم');
+    
+    const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : 'Unknown';
+    const severity = capitalize(analyzeResult?.severity || 'Unknown');
+    const confidence = capitalize(analyzeResult?.confidence_level || 'Unknown');
     const summary = advisoryResult?.disease_summary || '';
 
-    let shareText = `🌱 *FasalGuard Crop Report* 🌱\n`;
-    shareText += `---------------------------\n`;
-    shareText += `🌾 *Crop:* ${crop}\n`;
+    let shareText = `🌿 *FasalGuard AI Diagnosis*\n\n` +
+      `Crop: ${cropEn} (${cropUr})\n` +
+      `Condition: ${diseaseEn} (${diseaseUr})\n` +
+      `Severity: ${severity}\n` +
+      `Confidence: ${confidence}\n\n` +
+      `${summary}\n\n` +
+      `📱 Diagnosed by FasalGuard — AI Crop Health Scanner\n` +
+      `🔗 fasalguard.vercel.app`;
 
-    if (disease === 'Healthy' || disease === 'None') {
-      shareText += `✅ *Diagnosis:* Healthy\n`;
-      shareText += `\n${summary}\n`;
-    } else {
-      shareText += `🦠 *Diagnosis:* ${disease}\n`;
-      shareText += `⚠️ *Severity:* ${severity}\n`;
-      shareText += `\n📋 *Summary:*\n${summary}\n`;
-      
-      if (advisoryResult && advisoryResult.products && advisoryResult.products.length > 0) {
-        shareText += `\n💊 *Recommended Treatment:*\n`;
-        // Use a simple for loop to list treatments
-        for (let i = 0; i < advisoryResult.products.length; i++) {
-          const product = advisoryResult.products[i];
-          if (product) {
-            shareText += `- ${product.name} (${product.dosage})\n`;
-          }
-        }
-      }
+    // WhatsApp GET URL length limit is ~2000 chars. 
+    // encodeURIComponent inflates Urdu characters significantly (up to 9 chars per char).
+    // If it's too long, prioritize core diagnosis and branding over the summary.
+    if (encodeURIComponent(shareText).length > 1800) {
+      shareText = `🌿 *FasalGuard AI Diagnosis*\n\n` +
+        `Crop: ${cropEn} (${cropUr})\n` +
+        `Condition: ${diseaseEn} (${diseaseUr})\n` +
+        `Severity: ${severity}\n` +
+        `Confidence: ${confidence}\n\n` +
+        `📱 Diagnosed by FasalGuard — AI Crop Health Scanner\n` +
+        `🔗 fasalguard.vercel.app`;
     }
-
-    shareText += `\n---------------------------\n`;
-    shareText += `🔍 *Diagnosed by FasalGuard AI*`;
 
     if (navigator.share) {
       navigator.share({ title: 'FasalGuard Diagnosis', text: shareText });

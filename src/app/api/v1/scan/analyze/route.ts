@@ -136,10 +136,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 8-second timeout via AbortController — do not let a single scan hang
+    // 15-second timeout via AbortController — do not let a single scan hang
     // the way the old HuggingFace retries did (18+ seconds observed in testing).
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     let geminiResult;
     try {

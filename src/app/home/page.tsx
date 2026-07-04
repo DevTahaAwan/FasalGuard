@@ -38,7 +38,7 @@ const CROP_ICONS: Record<string, string> = {
 export default function HomePage() {
   const router = useRouter();
   const language = useAppStore((s) => s.language);
-  const { selectedCropSlugs, addCropSlug, removeCropSlug } = useAppStore();
+  const { selectedCropSlugs, addCropSlug, removeCropSlug, theme, setTheme } = useAppStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const cropsQuery = useQuery({ queryKey: ['crops'], queryFn: fetchCrops });
@@ -57,6 +57,14 @@ export default function HomePage() {
     seeAll: isRTL ? 'سب دیکھیں' : 'See All',
   };
 
+  const toggleTheme = () => {
+    if (theme === 'light') setTheme('dark');
+    else if (theme === 'dark') setTheme('sunlight');
+    else setTheme('light');
+  };
+
+  const themeIcon = theme === 'light' ? '☀️' : theme === 'dark' ? '🌙' : '🌞';
+
   return (
     <AppLayout>
       <div className="screen active" id="screen-home">
@@ -68,9 +76,14 @@ export default function HomePage() {
               <div className="logo-icon">🌿</div>
               <span className="logo-text">FasalGuard</span>
             </div>
-            <button className="lang-toggle" onClick={() => useAppStore.getState().setLanguage(isRTL ? 'en' : 'ur')}>
-              {isRTL ? 'English' : 'اردو'}
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="lang-toggle" onClick={toggleTheme}>
+                {themeIcon}
+              </button>
+              <button className="lang-toggle" onClick={() => useAppStore.getState().setLanguage(isRTL ? 'en' : 'ur')}>
+                {isRTL ? 'English' : 'اردو'}
+              </button>
+            </div>
           </div>
           <div className="greeting">{t.greeting}</div>
           <div className="greeting-sub">FasalGuard · Today</div>

@@ -96,42 +96,11 @@ export default function ScannerPage() {
     }
   };
 
-  const handleCapture = async () => {
-    if (!videoRef.current || !canvasRef.current || !cameraActive) return;
-
-    setValidating();
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    const resizeCanvas = document.createElement('canvas');
-    resizeCanvas.width = 224;
-    resizeCanvas.height = 224;
-    const resizeCtx = resizeCanvas.getContext('2d');
-    if (!resizeCtx) return;
-    resizeCtx.drawImage(canvas, 0, 0, 224, 224);
-
-    const smallDataUrl = resizeCanvas.toDataURL('image/jpeg', 0.8);
-
-    setCapturedImage(smallDataUrl);
+  const processAndAnalyzeImage = async (dataUrl: string) => {
+    setCapturedImage(dataUrl);
     stopCamera();
     setAnalyzing();
 
-    // NOTE (July 2026): This retry loop used to attempt 5x with 15+ second
-    // waits per attempt, specifically to ride out HuggingFace's serverless
-    // cold-start behavior (503 + estimated_time). That backend is gone.
-    // The Gemini route (/api/v1/scan/analyze) has no cold-start state and
-    // never returns 503 — it returns 502 (connection failure), 422
-    // (not-a-plant or low-confidence), or 500 (server misconfiguration).
-    // Retrying 5x against a backend with no "loading" state just made every
-    // real failure take up to 75+ seconds to surface, and mislabeled the
-    // result as "AI is waking up" regardless of actual cause. Retries are
-    // now 2 quick attempts, reserved for transient network blips only.
     try {
       const MAX_RETRIES = 2;
       let lastError = '';
@@ -145,7 +114,7 @@ export default function ScannerPage() {
           res = await fetch('/api/v1/scan/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: smallDataUrl, language }),
+            body: JSON.stringify({ image: dataUrl, language }),
           });
         } catch (fetchErr: any) {
           lastError = fetchErr.message || 'Network error';
@@ -157,8 +126,6 @@ export default function ScannerPage() {
           break;
         }
 
-        // Any non-OK response is a real, final error from this backend —
-        // there is no "model is loading, wait and retry" state anymore.
         if (!res.ok) {
           try {
             const errJson = await res.json();
@@ -197,88 +164,70 @@ export default function ScannerPage() {
         setError((lastErrorCode as ScanErrorCode) || 'UNKNOWN', lastError || 'Something went wrong. Please try scanning again.');
       }
     } catch (outerErr: any) {
-      console.error('handleCapture error:', outerErr);
+      console.error('Analysis error:', outerErr);
       setError('UNKNOWN', outerErr.message || 'Something went wrong. Please try scanning again.');
     }
+  };
+
+  const handleCapture = async () => {
+    if (!videoRef.current || !canvasRef.current || !cameraActive) return;
+
+    setValidating();
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const resizeCanvas = document.createElement('canvas');
+    resizeCanvas.width = 224;
+    resizeCanvas.height = 224;
+    const resizeCtx = resizeCanvas.getContext('2d');
+    if (!resizeCtx) return;
+    resizeCtx.drawImage(canvas, 0, 0, 224, 224);
+
+    const smallDataUrl = resizeCanvas.toDataURL('image/jpeg', 0.8);
+    await processAndAnalyzeImage(smallDataUrl);
   };
 
   const handleGallerySelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
 
+    // Reset input so same file can be selected again
+    e.target.value = '';
+    
+    setValidating();
+
     const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = reader.result as string;
-      setCapturedImage(dataUrl);
-      stopCamera();
-      setAnalyzing();
-
-      try {
-        const MAX_RETRIES = 2;
-        let lastError = '';
-        let lastErrorCode = '';
-        let succeeded = false;
-
-        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-          let res: Response | null = null;
-
-          try {
-            res = await fetch('/api/v1/scan/analyze', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ image: dataUrl, language }),
-            });
-          } catch (fetchErr: any) {
-            lastError = fetchErr.message || 'Network error';
-            lastErrorCode = 'NETWORK_ERROR';
-            if (attempt < MAX_RETRIES - 1) {
-              await new Promise((resolve) => setTimeout(resolve, 1500));
-              continue;
-            }
-            break;
-          }
-
-          if (!res.ok) {
-            try {
-              const errJson = await res.json();
-              lastErrorCode = errJson?.error?.code || String(res.status);
-              lastError = errJson?.error?.message || errJson?.message || 'Classification failed';
-            } catch {
-              lastErrorCode = String(res.status);
-              lastError = 'Classification failed';
-            }
-            break;
-          }
-
-          let json: any = null;
-          try {
-            json = await res.json();
-          } catch {
-            lastError = 'Invalid response from server';
-            lastErrorCode = 'PARSE_ERROR';
-            break;
-          }
-
-          if (!json.success) {
-            lastErrorCode = json?.error?.code || 'UNKNOWN';
-            lastError = json?.message || json?.error?.message || 'Classification failed';
-            break;
-          }
-
-          setAnalyzeResult(json.data);
-          router.push(`/diagnosis/${json.data.scan_id}`);
-          succeeded = true;
-          break;
-        }
-
-        if (!succeeded) {
-          setError((lastErrorCode as ScanErrorCode) || 'UNKNOWN', lastError || 'Something went wrong. Please try again.');
-        }
-      } catch (outerErr: any) {
-        console.error('handleGallerySelect error:', outerErr);
-        setError('UNKNOWN', outerErr.message || 'Something went wrong. Please try again.');
-      }
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const resizeCanvas = document.createElement('canvas');
+        resizeCanvas.width = 224;
+        resizeCanvas.height = 224;
+        const resizeCtx = resizeCanvas.getContext('2d');
+        if (!resizeCtx) return;
+        
+        // Center crop the image
+        const size = Math.min(img.width, img.height);
+        const startX = (img.width - size) / 2;
+        const startY = (img.height - size) / 2;
+        
+        resizeCtx.drawImage(img, startX, startY, size, size, 0, 0, 224, 224);
+        
+        const smallDataUrl = resizeCanvas.toDataURL('image/jpeg', 0.8);
+        processAndAnalyzeImage(smallDataUrl);
+      };
+      img.onerror = () => {
+        setError('UNKNOWN', 'Failed to read image file');
+      };
+      img.src = reader.result as string;
     };
+    reader.onerror = () => setError('UNKNOWN', 'Failed to read file');
     reader.readAsDataURL(file);
   };
 
@@ -337,8 +286,8 @@ export default function ScannerPage() {
         <div
           className="screen active"
           style={{
-            backgroundColor: '#0d1a0f',
-            color: '#fff',
+            backgroundColor: 'var(--bg)',
+            color: 'var(--fg)',
             justifyContent: 'center',
             alignItems: 'center',
             padding: '32px',
@@ -347,7 +296,7 @@ export default function ScannerPage() {
         >
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>🌿</div>
           <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>{friendlyTitle}</h2>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)', marginBottom: '24px', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '14px', color: 'var(--fg2)', marginBottom: '24px', lineHeight: 1.5 }}>
             {friendlyMessage}
           </p>
           {showRetry && (
@@ -355,9 +304,9 @@ export default function ScannerPage() {
               onClick={handleRetry}
               style={{
                 padding: '12px 28px',
-                background: '#2d9e57',
+                background: 'var(--green-accent)',
                 color: '#fff',
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-btn, 12px)',
                 fontSize: '15px',
                 fontWeight: 600,
                 border: 'none',
@@ -370,12 +319,29 @@ export default function ScannerPage() {
           )}
           <br />
           <button
+            onClick={() => galleryInputRef.current?.click()}
+            style={{
+              padding: '12px 28px',
+              background: 'var(--amber)',
+              color: '#fff',
+              borderRadius: 'var(--radius-btn, 12px)',
+              fontSize: '15px',
+              fontWeight: 600,
+              border: 'none',
+              cursor: 'pointer',
+              marginBottom: '12px',
+            }}
+          >
+            {isRTL ? 'گیلری سے اپلوڈ کریں' : 'Upload Image'}
+          </button>
+          <br />
+          <button
             onClick={handleClose}
             style={{
               padding: '10px 24px',
-              background: 'rgba(255,255,255,0.1)',
-              color: 'rgba(255,255,255,0.7)',
-              borderRadius: '10px',
+              background: 'var(--border)',
+              color: 'var(--fg2)',
+              borderRadius: 'var(--radius-btn, 10px)',
               fontSize: '13px',
               border: 'none',
               cursor: 'pointer',
@@ -390,14 +356,24 @@ export default function ScannerPage() {
 
   return (
     <AppLayout>
-      <div className="screen active" id="screen-camera">
+      <div
+        className="screen active"
+        id="screen-camera"
+        style={{
+          height: '100dvh',
+          maxHeight: '100dvh',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-        <StatusBar background="#000" color="rgba(255,255,255,0.7)" rightLabel="● REC" />
+        <StatusBar background="var(--bg)" color="var(--fg2)" rightLabel="● REC" />
 
-        <div className="simple-header" style={{ background: '#000' }}>
-          <div className="back-btn" onClick={handleClose} style={{ background: 'rgba(255,255,255,0.1)' }}>
-            <ArrowLeft color="#fff" size={20} />
+        <div className="simple-header" style={{ background: 'var(--bg)' }}>
+          <div className="back-btn" onClick={handleClose} style={{ background: 'var(--border)' }}>
+            <ArrowLeft color="var(--fg)" size={20} />
           </div>
           <div>
             <div className="screen-tag">اسکین کریں</div>
@@ -405,7 +381,7 @@ export default function ScannerPage() {
           </div>
         </div>
 
-        <div className="camera-view" style={{ flex: 1, minHeight: '320px', overflow: 'hidden' }}>
+        <div className="camera-view" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
           <div className="camera-bg" style={{ zIndex: 1 }}>
             {!cameraActive || phase === 'analyzing' || phase === 'validating' ? (
               <div
@@ -417,21 +393,22 @@ export default function ScannerPage() {
                   position: 'absolute',
                   inset: 0,
                   zIndex: 10,
-                  background: 'rgba(0,0,0,0.85)',
+                  background: 'var(--bg)',
+                  opacity: 0.95,
                 }}
               >
                 {phase === 'analyzing' || phase === 'validating' ? (
                   <>
                     <MathLoader />
-                    <p style={{ color: 'white', marginTop: '20px', fontSize: '18px', fontWeight: 'bold' }}>
+                    <p style={{ color: 'var(--fg)', marginTop: '20px', fontSize: '18px', fontWeight: 'bold' }}>
                       {isRTL ? 'تجزیہ ہو رہا ہے...' : 'Analyzing...'}
                     </p>
-                    <p style={{ color: 'rgba(255,255,255,0.5)', marginTop: '8px', fontSize: '12px' }}>
+                    <p style={{ color: 'var(--fg2)', marginTop: '8px', fontSize: '12px' }}>
                       {isRTL ? 'چند سیکنڈ میں نتیجہ آ جائے گا' : 'Result in a few seconds'}
                     </p>
                   </>
                 ) : (
-                  <p style={{ color: 'white' }}>{isRTL ? 'کیمرہ شروع ہو رہا ہے...' : 'Camera starting...'}</p>
+                  <p style={{ color: 'var(--fg)' }}>{isRTL ? 'کیمرہ شروع ہو رہا ہے...' : 'Camera starting...'}</p>
                 )}
               </div>
             ) : null}
@@ -459,12 +436,13 @@ export default function ScannerPage() {
                 <div
                   style={{
                     marginTop: '16px',
-                    color: 'rgba(255,255,255,0.9)',
+                    color: 'var(--fg)',
                     fontSize: '14px',
-                    background: 'rgba(0,0,0,0.5)',
+                    background: 'var(--bg)',
                     padding: '4px 12px',
                     borderRadius: '12px',
                     display: 'inline-block',
+                    boxShadow: 'var(--shadow-card)',
                   }}
                 >
                   {isRTL ? 'پتے یا پھل پر کیمرہ رکھیں' : 'Point at a leaf or fruit'}
@@ -475,19 +453,20 @@ export default function ScannerPage() {
         </div>
 
         <div className="camera-controls pb-24" style={{ zIndex: 2 }}>
-          <div className="cam-side-btn" onClick={toggleFlash}>
-            <Zap color={flashOn ? '#f59e0b' : 'rgba(255,255,255,0.8)'} size={20} />
+          <div className="cam-side-btn" onClick={toggleFlash} style={{ background: 'var(--border)' }}>
+            <Zap color={flashOn ? 'var(--amber)' : 'var(--fg)'} size={20} />
           </div>
           <div className="shutter" onClick={handleCapture} role="button">
             <div className="shutter-inner"></div>
           </div>
-          <div className="cam-side-btn" onClick={() => galleryInputRef.current && galleryInputRef.current.click()}>
-            <ImageIcon color="rgba(255,255,255,0.8)" size={20} />
+          <div className="cam-side-btn" onClick={() => galleryInputRef.current && galleryInputRef.current.click()} style={{ background: 'var(--border)' }}>
+            <ImageIcon color="var(--fg)" size={20} />
           </div>
           <input
             ref={galleryInputRef}
             type="file"
             accept="image/*"
+            capture="environment"
             id="gallery-input"
             style={{ display: 'none' }}
             onChange={handleGallerySelect}

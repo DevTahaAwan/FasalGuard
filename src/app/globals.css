@@ -144,7 +144,7 @@ html[dir='rtl'] .font-sans {
 
   @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;500;600&display=swap');
 
-  :root {
+  :root, .theme-light {
     --fg: #0d1a0f;
     --fg2: #3a4a3c;
     --fg3: #6b7b6d;
@@ -164,6 +164,56 @@ html[dir='rtl'] .font-sans {
     --shadow-card: 0 1px 4px rgba(0,0,0,0.06);
     --border: rgba(0,0,0,0.07);
   }
+
+  /* Dark Theme */
+  .theme-dark {
+    --fg: #f1f5f9;
+    --fg2: #cbd5e1;
+    --fg3: #94a3b8;
+    --bg: #0f172a;
+    --card: #1e293b;
+    --green-primary: #4ade80;
+    --green-dark: #166534;
+    --green-light: #14532d;
+    --green-accent: #10b981;
+    --amber: #fbbf24;
+    --amber-bg: #451a03;
+    --red: #ef4444;
+    --red-bg: #450a0a;
+    --shadow: 0 2px 12px rgba(0,0,0,0.50);
+    --shadow-card: 0 1px 4px rgba(0,0,0,0.30);
+    --border: rgba(255,255,255,0.1);
+  }
+
+  /* Sunlight Theme - WCAG AAA 7:1 Minimum Contrast */
+  .theme-sunlight {
+    --fg: #000000;
+    --fg2: #1a1a1a;
+    --fg3: #2a2a2a;
+    --bg: #ffffff;
+    --card: #ffffff;
+    --green-primary: #004d00;
+    --green-dark: #000000;
+    --green-light: #ffffff;
+    --green-accent: #004d00;
+    --amber: #733900;
+    --amber-bg: #ffffff;
+    --red: #8a0000;
+    --red-bg: #ffffff;
+    --shadow: 0 4px 16px rgba(0,0,0,0.30);
+    --shadow-card: 0 2px 8px rgba(0,0,0,0.20);
+    --border: #000000;
+    font-weight: 600; /* Bolder text for sunlight readability */
+  }
+
+  /* Force bolder text across descendants in sunlight mode */
+  .theme-sunlight * {
+    font-weight: 600;
+  }
+  .theme-sunlight strong, .theme-sunlight b, .theme-sunlight h1, .theme-sunlight h2, .theme-sunlight h3 {
+    font-weight: 800;
+  }
+
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -440,8 +490,7 @@ html[dir='rtl'] .font-sans {
   .bottom-nav {
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    max-width: 480px;
-    margin: 0 auto;
+    width: 100%;
     background: rgba(255,255,255,0.96);
     backdrop-filter: blur(16px);
     border-top: 1px solid var(--border);
