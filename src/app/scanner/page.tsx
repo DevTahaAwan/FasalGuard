@@ -7,7 +7,12 @@ import { useAppStore } from '@/stores/appStore';
 import { useScanStore, type ScanErrorCode } from '@/stores/scanStore';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { StatusBar } from '@/components/ui/StatusBar';
-import { MathLoader } from '@/components/ui/MathLoader';
+import { MOCK_CROPS } from '@/lib/mock/crops';
+
+const CROP_ICONS: Record<string, string> = {
+  wheat: '🌾', cotton: '🌿', rice: '🍚', tomato: '🍅', potato: '🥔',
+  sugarcane: '🎋', maize: '🌽', onion: '🧅', chilli: '🌶️', mango: '🥭',
+};
 
 export default function ScannerPage() {
   const router = useRouter();
@@ -32,6 +37,18 @@ export default function ScannerPage() {
   const [cameraActive, setCameraActive] = useState(false);
   const [flashSupported, setFlashSupported] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // New local state for flow control
+  const [view, setView] = useState<'entry' | 'picker' | 'camera' | 'confirm'>('entry');
+  const [path, setPath] = useState<'A' | 'B' | null>(null);
+  const [selectedCropSlugLocal, setSelectedCropSlugLocal] = useState<string | null>(null);
+  const [identifiedCrop, setIdentifiedCrop] = useState<{ crop_type_slug: string, crop_name_en: string, crop_name_ur: string, confidence_score: number } | null>(null);
+  const [tempImage, setTempImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
 
   const isRTL = language === 'ur';
 
@@ -76,11 +93,14 @@ export default function ScannerPage() {
     }
   }, [language, startCapture, setError]);
 
+  // Modified camera lifecycle hook
   useEffect(() => {
-    startCamera();
-    return () => stopCamera();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (view === 'camera' && phase !== 'analyzing' && phase !== 'validating') {
+      startCamera();
+    } else if (view !== 'camera') {
+      stopCamera();
+    }
+  }, [view, phase, startCamera, stopCamera]);
 
   const toggleFlash = async () => {
     if (!streamRef.current || !flashSupported) return;
@@ -96,7 +116,7 @@ export default function ScannerPage() {
     }
   };
 
-  const processAndAnalyzeImage = async (dataUrl: string) => {
+  const processAndAnalyzeImage = async (dataUrl: string, cropSlug: string) => {
     setCapturedImage(dataUrl);
     stopCamera();
     setAnalyzing();
@@ -114,7 +134,7 @@ export default function ScannerPage() {
           res = await fetch('/api/v1/scan/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: dataUrl, language }),
+            body: JSON.stringify({ image: dataUrl, crop_type_slug: cropSlug, language }),
           });
         } catch (fetchErr: any) {
           lastError = fetchErr.message || 'Network error';
@@ -169,10 +189,39 @@ export default function ScannerPage() {
     }
   };
 
+  const identifyCrop = async (dataUrl: string) => {
+    setCapturedImage(dataUrl);
+    setTempImage(dataUrl);
+    stopCamera();
+    setValidating();
+    
+    try {
+      const res = await fetch('/api/v1/scan/identify-crop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataUrl }),
+      });
+      
+      const json = await res.json();
+      if (!json.success) {
+        setError(json?.error?.code || 'UNKNOWN', json?.error?.message || 'Failed to identify crop');
+        return;
+      }
+      
+      setIdentifiedCrop(json.data);
+      setView('confirm');
+    } catch (err: any) {
+      setError('NETWORK_ERROR', err.message);
+    }
+  };
+
   const handleCapture = async () => {
     if (!videoRef.current || !canvasRef.current || !cameraActive) return;
 
     setValidating();
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(50);
+    }
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
@@ -190,7 +239,12 @@ export default function ScannerPage() {
     resizeCtx.drawImage(canvas, 0, 0, 224, 224);
 
     const smallDataUrl = resizeCanvas.toDataURL('image/jpeg', 0.8);
-    await processAndAnalyzeImage(smallDataUrl);
+    
+    if (path === 'A' && selectedCropSlugLocal) {
+      await processAndAnalyzeImage(smallDataUrl, selectedCropSlugLocal);
+    } else {
+      await identifyCrop(smallDataUrl);
+    }
   };
 
   const handleGallerySelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -220,7 +274,12 @@ export default function ScannerPage() {
         resizeCtx.drawImage(img, startX, startY, size, size, 0, 0, 224, 224);
         
         const smallDataUrl = resizeCanvas.toDataURL('image/jpeg', 0.8);
-        processAndAnalyzeImage(smallDataUrl);
+        
+        if (path === 'A' && selectedCropSlugLocal) {
+          processAndAnalyzeImage(smallDataUrl, selectedCropSlugLocal);
+        } else {
+          identifyCrop(smallDataUrl);
+        }
       };
       img.onerror = () => {
         setError('UNKNOWN', 'Failed to read image file');
@@ -234,20 +293,34 @@ export default function ScannerPage() {
   const handleClose = () => {
     stopCamera();
     reset();
-    router.back();
+    if (view !== 'entry') {
+      setView('entry');
+      setPath(null);
+      setTempImage(null);
+      setSelectedCropSlugLocal(null);
+      setIdentifiedCrop(null);
+    } else {
+      router.back();
+    }
   };
 
   const handleRetry = () => {
     reset();
-    startCamera();
+    if (view === 'confirm') {
+      setView('camera');
+    }
+    if (view === 'camera') {
+      startCamera();
+    } else {
+      setView('entry');
+      setPath(null);
+      setTempImage(null);
+      setSelectedCropSlugLocal(null);
+      setIdentifiedCrop(null);
+    }
   };
 
   if (phase === 'error') {
-    // Error copy now keyed off the REAL error_code the backend returns,
-    // not a guess based on whether the word "fetch" happens to appear in
-    // the message. See route.ts for the authoritative code list:
-    // NOT_A_PLANT, LOW_CONFIDENCE, MISSING_IMAGE, PARSE_ERROR, CAMERA_DENIED,
-    // NETWORK_ERROR, UNKNOWN.
     let friendlyTitle = isRTL ? 'خرابی' : 'Something went wrong';
     let friendlyMessage = errorMessage || (isRTL ? 'دوبارہ کوشش کریں۔' : 'Please try again.');
     const showRetry = true;
@@ -284,7 +357,7 @@ export default function ScannerPage() {
     return (
       <AppLayout>
         <div
-          className="screen active"
+          className="screen active transition-opacity duration-500 ease-in-out opacity-100"
           style={{
             backgroundColor: 'var(--bg)',
             color: 'var(--fg)',
@@ -314,7 +387,7 @@ export default function ScannerPage() {
                 marginBottom: '12px',
               }}
             >
-              {isRTL ? 'دوبارہ اسکین کریں' : 'Scan Again'}
+              {isRTL ? 'دوبارہ کوشش کریں' : 'Try Again'}
             </button>
           )}
           <br />
@@ -354,10 +427,128 @@ export default function ScannerPage() {
     );
   }
 
+  if (view === 'entry') {
+    return (
+      <AppLayout>
+        <div className={`screen active transition-opacity duration-500 ease-in-out ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
+          <StatusBar />
+          <div className="simple-header">
+             <div className="back-btn min-h-[48px] min-w-[48px] flex items-center justify-center p-3" onClick={handleClose}>
+               <ArrowLeft size={20} />
+             </div>
+             <div className="screen-title">
+               {isRTL ? (
+                 <span className="text-xl font-bold leading-relaxed">اسکین شروع کریں</span>
+               ) : (
+                 <span className="text-base font-normal">Start Scan</span>
+               )}
+             </div>
+          </div>
+          <div className="flex flex-col gap-4 p-6 justify-center flex-1">
+             <button onClick={() => { setPath('A'); setView('picker'); }} className="bg-green-600 text-white p-4 rounded-xl min-h-[48px] flex items-center justify-center font-bold text-lg shadow-md">
+               {isRTL ? 'مجھے فصل معلوم ہے' : 'I know my crop'}
+             </button>
+             <button onClick={() => { setPath('B'); setView('camera'); }} className="bg-blue-600 text-white p-4 rounded-xl min-h-[48px] flex items-center justify-center font-bold text-lg shadow-md">
+               {isRTL ? 'میری مدد کریں (شناخت)' : 'Help me identify it'}
+             </button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (view === 'picker') {
+    return (
+      <AppLayout>
+        <div className={`screen active transition-opacity duration-500 ease-in-out ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
+          <StatusBar />
+          <div className="simple-header">
+             <div className="back-btn min-h-[48px] min-w-[48px] flex items-center justify-center p-3" onClick={() => tempImage ? setView('confirm') : setView('entry')}>
+               <ArrowLeft size={20} />
+             </div>
+             <div className="screen-title">
+               {isRTL ? (
+                 <span className="text-xl font-bold leading-relaxed">فصل منتخب کریں</span>
+               ) : (
+                 <span className="text-base font-normal">Select Crop</span>
+               )}
+             </div>
+          </div>
+          <div className="p-4 grid grid-cols-2 gap-4 overflow-y-auto pb-8 flex-1 content-start">
+            {MOCK_CROPS.map(crop => (
+               <button key={crop.slug} className="p-4 bg-white border border-gray-200 rounded-xl flex flex-col items-center justify-center min-h-[48px] shadow-sm" onClick={() => {
+                 setSelectedCropSlugLocal(crop.slug);
+                 if (tempImage) {
+                   setView('camera');
+                   processAndAnalyzeImage(tempImage, crop.slug);
+                 } else {
+                   setView('camera');
+                 }
+               }}>
+                 <span className="text-4xl mb-3">{CROP_ICONS[crop.slug] || '🌱'}</span>
+                 <span className="font-bold text-gray-800">
+                   {isRTL ? (
+                     <span className="text-xl font-bold leading-relaxed">{crop.name_ur}</span>
+                   ) : (
+                     <span className="text-base font-normal">{crop.name_en}</span>
+                   )}
+                 </span>
+               </button>
+            ))}
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (view === 'confirm' && identifiedCrop) {
+    return (
+      <AppLayout>
+        <div className={`screen active transition-opacity duration-500 ease-in-out ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
+          <StatusBar />
+          <div className="simple-header">
+             <div className="back-btn min-h-[48px] min-w-[48px] flex items-center justify-center p-3" onClick={() => { setView('camera'); setTempImage(null); setIdentifiedCrop(null); }}>
+               <ArrowLeft size={20} />
+             </div>
+             <div className="screen-title">
+               {isRTL ? (
+                 <span className="text-xl font-bold leading-relaxed">تصدیق کریں</span>
+               ) : (
+                 <span className="text-base font-normal">Confirm Crop</span>
+               )}
+             </div>
+          </div>
+          <div className="flex flex-col p-6 items-center flex-1">
+             {tempImage && <img src={tempImage} alt="Captured" className="w-48 h-48 object-cover rounded-2xl mb-6 shadow-md border-4 border-white" />}
+             <h2 className="text-2xl font-bold text-center mb-8 text-gray-800">
+               {isRTL 
+                 ? `یہ ${identifiedCrop.crop_name_ur} لگ رہا ہے۔ کیا یہ درست ہے؟`
+                 : `This looks like ${identifiedCrop.crop_name_en}. Is this correct?`}
+             </h2>
+             <div className="w-full flex flex-col gap-4 mt-auto pb-4">
+               <button onClick={() => {
+                 setView('camera');
+                 processAndAnalyzeImage(tempImage!, identifiedCrop.crop_type_slug);
+               }} className="bg-green-600 text-white p-4 rounded-xl min-h-[48px] flex items-center justify-center font-bold text-lg shadow-md w-full">
+                 {isRTL ? 'ہاں، جاری رکھیں' : 'Yes, continue'}
+               </button>
+               <button onClick={() => {
+                 setPath('A');
+                 setView('picker');
+               }} className="bg-amber-500 text-white p-4 rounded-xl min-h-[48px] flex items-center justify-center font-bold text-lg shadow-md w-full">
+                 {isRTL ? 'نہیں، مجھے منتخب کرنے دیں' : 'No, let me pick'}
+               </button>
+             </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div
-        className="screen active"
+        className={`screen active transition-opacity duration-500 ease-in-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
         id="screen-camera"
         style={{
           height: '100dvh',
@@ -372,12 +563,15 @@ export default function ScannerPage() {
         <StatusBar background="var(--bg)" color="var(--fg2)" rightLabel="● REC" />
 
         <div className="simple-header" style={{ background: 'var(--bg)' }}>
-          <div className="back-btn" onClick={handleClose} style={{ background: 'var(--border)' }}>
+          <div className="back-btn min-h-[48px] min-w-[48px] flex items-center justify-center p-3" onClick={handleClose} style={{ background: 'var(--border)' }}>
             <ArrowLeft color="var(--fg)" size={20} />
           </div>
           <div>
-            <div className="screen-tag">اسکین کریں</div>
-            <div className="screen-title">Scan Crop</div>
+            {isRTL ? (
+              <span className="text-xl font-bold leading-relaxed">اسکین کریں</span>
+            ) : (
+              <span className="text-base font-normal">Scan Crop</span>
+            )}
           </div>
         </div>
 
@@ -398,17 +592,21 @@ export default function ScannerPage() {
                 }}
               >
                 {phase === 'analyzing' || phase === 'validating' ? (
-                  <>
-                    <MathLoader />
-                    <p style={{ color: 'var(--fg)', marginTop: '20px', fontSize: '18px', fontWeight: 'bold' }}>
-                      {isRTL ? 'تجزیہ ہو رہا ہے...' : 'Analyzing...'}
-                    </p>
-                    <p style={{ color: 'var(--fg2)', marginTop: '8px', fontSize: '12px' }}>
-                      {isRTL ? 'چند سیکنڈ میں نتیجہ آ جائے گا' : 'Result in a few seconds'}
-                    </p>
-                  </>
+                  <div className="w-full flex flex-col gap-4 p-6">
+                    <div className="h-64 w-full bg-gray-300 animate-pulse rounded-lg"></div>
+                    <div className="h-8 w-3/4 bg-gray-300 animate-pulse rounded-md"></div>
+                    <div className="h-4 w-full bg-gray-300 animate-pulse rounded-md"></div>
+                    <div className="h-4 w-5/6 bg-gray-300 animate-pulse rounded-md"></div>
+                    <div className="h-4 w-4/6 bg-gray-300 animate-pulse rounded-md mt-4"></div>
+                  </div>
                 ) : (
-                  <p style={{ color: 'var(--fg)' }}>{isRTL ? 'کیمرہ شروع ہو رہا ہے...' : 'Camera starting...'}</p>
+                  <p style={{ color: 'var(--fg)' }}>
+                    {isRTL ? (
+                      <span className="text-xl font-bold leading-relaxed">کیمرہ شروع ہو رہا ہے...</span>
+                    ) : (
+                      <span className="text-base font-normal">Camera starting...</span>
+                    )}
+                  </p>
                 )}
               </div>
             ) : null}
@@ -445,7 +643,11 @@ export default function ScannerPage() {
                     boxShadow: 'var(--shadow-card)',
                   }}
                 >
-                  {isRTL ? 'پتے یا پھل پر کیمرہ رکھیں' : 'Point at a leaf or fruit'}
+                  {isRTL ? (
+                    <span className="text-xl font-bold leading-relaxed">پتے یا پھل پر کیمرہ رکھیں</span>
+                  ) : (
+                    <span className="text-base font-normal">Point at a leaf or fruit</span>
+                  )}
                 </div>
               </div>
             )}
@@ -453,13 +655,13 @@ export default function ScannerPage() {
         </div>
 
         <div className="camera-controls pb-24" style={{ zIndex: 2 }}>
-          <div className="cam-side-btn" onClick={toggleFlash} style={{ background: 'var(--border)' }}>
+          <div className="cam-side-btn min-h-[48px] min-w-[48px] flex items-center justify-center p-3" onClick={toggleFlash} style={{ background: 'var(--border)' }}>
             <Zap color={flashOn ? 'var(--amber)' : 'var(--fg)'} size={20} />
           </div>
-          <div className="shutter" onClick={handleCapture} role="button">
+          <div className="shutter min-h-[48px] min-w-[48px] flex items-center justify-center p-3" onClick={handleCapture} role="button">
             <div className="shutter-inner"></div>
           </div>
-          <div className="cam-side-btn" onClick={() => galleryInputRef.current && galleryInputRef.current.click()} style={{ background: 'var(--border)' }}>
+          <div className="cam-side-btn min-h-[48px] min-w-[48px] flex items-center justify-center p-3" onClick={() => galleryInputRef.current && galleryInputRef.current.click()} style={{ background: 'var(--border)' }}>
             <ImageIcon color="var(--fg)" size={20} />
           </div>
           <input

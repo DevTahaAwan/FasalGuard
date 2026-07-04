@@ -42,10 +42,16 @@ export default function DealersPage() {
       <div className="screen active" id="screen-dealers">
         <StatusBar />
         <div className="simple-header">
-          <div className="back-btn" onClick={() => router.back()}>
+          <div className="back-btn min-h-[48px] min-w-[48px] flex items-center justify-center p-3" onClick={() => router.back()}>
             <ArrowLeft color="#fff" size={20} />
           </div>
-          <div className="screen-title">{isRTL ? 'قریبی دکانیں' : 'Nearby Dealers'}</div>
+          <div className="screen-title">
+            {isRTL ? (
+              <span className="text-xl font-bold leading-relaxed">قریبی دکانیں</span>
+            ) : (
+              <span className="text-base font-normal">Nearby Dealers</span>
+            )}
+          </div>
         </div>
 
         <div className="scroll-content" style={{ paddingTop: '20px' }}>
@@ -63,7 +69,13 @@ export default function DealersPage() {
           ) : (
             <div className="map-placeholder">
               <MapPin size={36} color="var(--green-accent)" />
-              <span>{isRTL ? 'نقشہ لوڈ ہو رہا ہے...' : 'Loading map...'}</span>
+              <span>
+                {isRTL ? (
+                  <span className="text-xl font-bold leading-relaxed">نقشہ لوڈ ہو رہا ہے...</span>
+                ) : (
+                  <span className="text-base font-normal">Loading map...</span>
+                )}
+              </span>
             </div>
           )}
 
@@ -76,23 +88,45 @@ export default function DealersPage() {
                   <MapPin color="var(--green-primary)" size={22} />
                 </div>
                 <div className="dealer-info">
-                  <div className="dealer-name">{isRTL ? dealer.name_ur : dealer.name}</div>
-                  <div className="dealer-addr">{isRTL ? dealer.address_ur : dealer.address}</div>
+                  <div className="dealer-name">
+                    {isRTL ? (
+                      <span className="text-xl font-bold leading-relaxed">{dealer.name_ur}</span>
+                    ) : (
+                      <span className="text-base font-normal">{dealer.name}</span>
+                    )}
+                  </div>
+                  <div className="dealer-addr">
+                    {isRTL ? (
+                      <span className="text-xl font-bold leading-relaxed">{dealer.address_ur}</span>
+                    ) : (
+                      <span className="text-base font-normal">{dealer.address}</span>
+                    )}
+                  </div>
                   <div className="dealer-dist">{dealer.distance_km} km away</div>
                 </div>
                 <div className="dealer-actions">
-                  <div className="dealer-action-btn" onClick={() => window.location.href = `tel:${dealer.phone}`}>
+                  <div className="dealer-action-btn min-h-[48px] min-w-[48px] flex items-center justify-center p-3" onClick={() => window.location.href = `tel:${dealer.phone}`}>
                     <Phone size={18} />
                   </div>
-                  <div className="dealer-action-btn" onClick={() => window.open(`https://maps.google.com/?q=${dealer.lat},${dealer.lng}`)}>
+                  <div className="dealer-action-btn min-h-[48px] min-w-[48px] flex items-center justify-center p-3" onClick={() => window.open(`https://maps.google.com/?q=${dealer.lat},${dealer.lng}`)}>
                     <Navigation size={18} />
                   </div>
                 </div>
               </div>
             ))
-          ) : (
-            <p>No dealers found</p>
-          )}
+            ) : (
+              <div className="flex flex-col items-center justify-center p-12 text-gray-500 text-center mt-10">
+                <svg className="w-24 h-24 text-gray-300 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <h3 className="text-xl font-bold text-gray-700 mb-2">
+                  {isRTL ? 'کوئی ریکارڈ نہیں ملا' : 'No records found'}
+                </h3>
+                <p className="text-base">
+                  {isRTL ? 'اپنا پہلا سکین شروع کریں!' : 'Let\'s start your first scan!'}
+                </p>
+              </div>
+            )}
         </div>
       </div>
     </AppLayout>

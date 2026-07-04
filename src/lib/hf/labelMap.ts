@@ -914,6 +914,23 @@ export function getAllCropSlugs(): string[] {
 }
 
 /**
+ * Returns disease_slug values scoped to a SINGLE crop, including 'healthy'.
+ * Used by the disease-diagnosis flow once the crop is already known (either
+ * user-selected or confirmed via the crop-identification flow) — this is
+ * what allows Gemini's schema to be constrained to e.g. only wheat's 7
+ * diseases instead of all 60+ diseases across every crop, removing the
+ * crop-guessing ambiguity from the disease-diagnosis call entirely.
+ */
+export function getDiseaseSlugsForCrop(cropSlug: string): string[] {
+  const slugs = new Set<string>();
+  for (const mapping of Object.values(LABEL_MAP)) {
+    if (mapping.crop_type_slug === cropSlug) {
+      slugs.add(mapping.disease_slug);
+    }
+  }
+  return Array.from(slugs);
+}
+/**
  * Find a mapping by its disease_slug value directly (e.g. "wheat_yellow_rust"),
  * as opposed to resolveLabel() which expects the original HuggingFace-style
  * "Crop___Disease" key format.

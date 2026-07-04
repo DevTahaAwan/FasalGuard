@@ -27,10 +27,17 @@ export default function DiagnosisPage() {
   const { language } = useAppStore();
   const { analyzeResult, advisoryResult, setAdvisoryResult, phase, capturedImageDataUrl } = useScanStore();
   const [loading, setLoading] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const isRTL = language === 'ur';
 
   useEffect(() => {
+    setIsVisible(true);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate([100, 50, 100]);
+    }
+
     if (advisoryResult) {
       setLoading(false);
       return;
@@ -152,14 +159,27 @@ export default function DiagnosisPage() {
 
   const isHealthy = analyzeResult.is_healthy || advisoryResult.advisory_type === 'healthy_confirmation';
 
+  const diagnosis = analyzeResult;
+  let borderColor = 'border-green-500';
+  if (diagnosis.severity === 'high' || diagnosis.severity === 'urgent') {
+    borderColor = 'border-red-500';
+  } else if (diagnosis.severity === 'moderate') {
+    borderColor = 'border-yellow-500';
+  }
+
+  let displaySummary = advisoryResult.disease_summary || '';
+  if (!isExpanded && displaySummary.length > 100) {
+    displaySummary = displaySummary.substring(0, 100) + '...';
+  }
+
   return (
     <AppLayout>
-      <div className="screen active" id="screen-result">
+      <div className={`screen active transition-opacity duration-500 ease-in-out ${isVisible ? 'opacity-100' : 'opacity-0'}`} id="screen-result">
         <StatusBar />
 
         <div className="result-header">
           <div className="header-row">
-            <div className="back-btn" onClick={() => router.push('/home')}>
+            <div className="back-btn min-h-[48px] min-w-[48px] flex items-center justify-center p-3" onClick={() => router.push('/home')}>
               <ArrowLeft color="#fff" size={20} />
             </div>
             <div className="screen-tag">{isRTL ? 'نتیجہ' : 'Result'}</div>
@@ -168,13 +188,19 @@ export default function DiagnosisPage() {
           
           <div className="result-crop-tag">
             <span style={{ fontSize: '16px', marginRight: '4px' }}>{CROP_ICONS[analyzeResult.crop_type_slug || ''] || '🌱'}</span>
-            {analyzeResult.crop_name_en} · {analyzeResult.crop_name_ur}
+            {isRTL ? (
+              <span className="text-xl font-bold leading-relaxed">{analyzeResult.crop_name_ur}</span>
+            ) : (
+              <span className="text-base font-normal">{analyzeResult.crop_name_en}</span>
+            )}
           </div>
           
           <div className="result-disease">
-            {isHealthy ? (isRTL ? 'فصل صحت مند ہے' : 'Crop is Healthy') : analyzeResult.disease_name_en}
-            {!isHealthy && <br/>}
-            {!isHealthy && <span style={{ fontFamily: "'Noto Nastaliq Urdu',serif", fontSize: '20px', fontWeight: 500 }}>{analyzeResult.disease_name_ur}</span>}
+            {isRTL ? (
+              <span className="text-xl font-bold leading-relaxed">{isHealthy ? 'فصل صحت مند ہے' : analyzeResult.disease_name_ur}</span>
+            ) : (
+              <span className="text-base font-normal">{isHealthy ? 'Crop is Healthy' : analyzeResult.disease_name_en}</span>
+            )}
           </div>
           
           {!isHealthy && (
@@ -186,21 +212,31 @@ export default function DiagnosisPage() {
                 <div className={`sev-pill ${analyzeResult.severity === 'high' ? 'filled high' : ''}`}></div>
               </div>
               <span style={{ fontSize: '12px', color: analyzeResult.severity === 'high' ? '#fca5a5' : '#fcd34d', fontWeight: 600 }}>
-                {analyzeResult.severity === 'high' ? 'Severe · شدید' : 'Moderate · درمیانہ'}
+                {isRTL ? (
+                  <span className="text-xl font-bold leading-relaxed">{analyzeResult.severity === 'high' ? 'شدید' : 'درمیانہ'}</span>
+                ) : (
+                  <span className="text-base font-normal">{analyzeResult.severity === 'high' ? 'Severe' : 'Moderate'}</span>
+                )}
               </span>
             </div>
           )}
         </div>
 
-        <div className="result-content">
+        <div className={`result-content border-4 rounded-xl p-4 bg-white shadow-lg ${borderColor}`}>
           <div style={{ height: '14px' }}></div>
 
-          <button className="audio-btn">
+          <button className="audio-btn min-h-[48px] min-w-[48px] flex items-center justify-center p-3">
             <div className="audio-icon">
               <Volume2 color="#fff" size={20} />
             </div>
             <div className="audio-text">
-              <div className="audio-text-title">{isRTL ? 'آواز میں سنیں · Play Audio' : 'Play Audio · آواز میں سنیں'}</div>
+              <div className="audio-text-title">
+                {isRTL ? (
+                  <span className="text-xl font-bold leading-relaxed">آواز میں سنیں</span>
+                ) : (
+                  <span className="text-base font-normal">Play Audio</span>
+                )}
+              </div>
               <div className="audio-text-sub">Tap to hear full diagnosis in Urdu</div>
             </div>
             <Play size={18} color="var(--green-primary)" />
@@ -214,9 +250,23 @@ export default function DiagnosisPage() {
                 style={{ width: '100%', borderRadius: '12px', marginBottom: '12px', objectFit: 'cover', maxHeight: '200px' }}
               />
             )}
-            <div className="info-card-title">{isRTL ? 'بیماری کی معلومات · Disease Info' : 'Disease Info · بیماری کی معلومات'}</div>
+            <div className="info-card-title">
+              {isRTL ? (
+                <span className="text-xl font-bold leading-relaxed">بیماری کی معلومات</span>
+              ) : (
+                <span className="text-base font-normal">Disease Info</span>
+              )}
+            </div>
             <div className="info-card-body">
-              {advisoryResult.disease_summary}
+              <p className="text-gray-700 mt-2">{displaySummary}</p>
+              {advisoryResult.disease_summary && advisoryResult.disease_summary.length > 100 && (
+                <button 
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="mt-2 text-green-700 font-bold underline min-h-[48px] p-2"
+                >
+                  {isExpanded ? (isRTL ? 'کم دکھائیں' : 'Read Less') : (isRTL ? 'مزید پڑھیں' : 'Read More')}
+                </button>
+              )}
               <br/><br/>
               <span style={{ fontFamily: "'Noto Nastaliq Urdu',serif", fontSize: '14px', direction: 'rtl', display: 'block', marginTop: '8px' }}>
                 {advisoryResult.severity_explanation}
@@ -226,7 +276,13 @@ export default function DiagnosisPage() {
 
           {!isHealthy && advisoryResult.products && advisoryResult.products.length > 0 && (
             <div className="info-card">
-              <div className="info-card-title">{isRTL ? 'علاج · Treatment' : 'Treatment · علاج'}</div>
+              <div className="info-card-title">
+                {isRTL ? (
+                  <span className="text-xl font-bold leading-relaxed">علاج</span>
+                ) : (
+                  <span className="text-base font-normal">Treatment</span>
+                )}
+              </div>
               {advisoryResult.products.map((product, index) => (
                 <div key={index} className="treatment-item">
                   <div className="treat-num">{index + 1}</div>
@@ -241,7 +297,13 @@ export default function DiagnosisPage() {
                 <div className="treatment-item">
                   <div className="treat-num" style={{ background: '#fef2f2', color: '#dc2626' }}>!</div>
                   <div>
-                    <div className="treat-name">Safety Note · احتیاط</div>
+                    <div className="treat-name">
+                      {isRTL ? (
+                        <span className="text-xl font-bold leading-relaxed">احتیاط</span>
+                      ) : (
+                        <span className="text-base font-normal">Safety Note</span>
+                      )}
+                    </div>
                     <div className="treat-dose">{advisoryResult.safety_note}</div>
                   </div>
                 </div>
