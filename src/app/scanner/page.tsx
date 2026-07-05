@@ -41,6 +41,21 @@ export default function ScannerPage() {
 
   // New local state for flow control
   const [view, setView] = useState<'entry' | 'picker' | 'camera' | 'confirm'>('entry');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (event: any) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        // Pass the base64 string directly to your existing analysis function
+        // @ts-ignore
+        handleCapture(reader.result); 
+      };
+      reader.readAsDataURL(file);
+    }
+  };
   const [path, setPath] = useState<'A' | 'B' | null>(null);
   const [selectedCropSlugLocal, setSelectedCropSlugLocal] = useState<string | null>(null);
   const [identifiedCrop, setIdentifiedCrop] = useState<{ crop_type_slug: string, crop_name_en: string, crop_name_ur: string, confidence_score: number } | null>(null);
@@ -391,21 +406,21 @@ export default function ScannerPage() {
             </button>
           )}
           <br />
-          <button
-            onClick={() => galleryInputRef.current?.click()}
-            style={{
-              padding: '12px 28px',
-              background: 'var(--amber)',
-              color: '#fff',
-              borderRadius: 'var(--radius-btn, 12px)',
-              fontSize: '15px',
-              fontWeight: 600,
-              border: 'none',
-              cursor: 'pointer',
-              marginBottom: '12px',
-            }}
+          {/* Hidden File Input */}
+          <input 
+            type="file" 
+            accept="image/*" 
+            className="hidden" 
+            ref={fileInputRef} 
+            onChange={handleFileUpload} 
+          />
+
+          {/* Update the existing Upload Button */}
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            className="bg-amber-700 text-white min-h-[48px] min-w-[48px] px-6 py-3 rounded-md font-bold"
           >
-            {isRTL ? 'گیلری سے اپلوڈ کریں' : 'Upload Image'}
+            {isRTL ? 'تصویر اپلوڈ کریں' : 'Upload Image'}
           </button>
           <br />
           <button

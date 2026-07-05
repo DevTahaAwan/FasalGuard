@@ -120,7 +120,13 @@ export default function HomePage() {
                   onClick={() => setIsModalOpen(true)}
                 >
                   <div className="crop-emoji">{CROP_ICONS[crop.slug] || '🌱'}</div>
-                  <div className="crop-name">{crop.name_en}<br/>{crop.name_ur}</div>
+                  <div className="crop-name">
+                    {isRTL ? (
+                      <span className="text-sm font-bold">{crop.name_ur}</span>
+                    ) : (
+                      <span className="text-sm font-normal">{crop.name_en}</span>
+                    )}
+                  </div>
                 </div>
               ))
             ) : null}
@@ -141,8 +147,20 @@ export default function HomePage() {
                     <span style={{ fontSize: '22px' }}>{CROP_ICONS[scan.crop_type_slug] || '🌱'}</span>
                   </div>
                   <div className="hist-info">
-                    <div className="hist-crop">{scan.crop_name_en} · {scan.crop_name_ur}</div>
-                    <div className="hist-disease">{scan.is_healthy ? (isRTL ? 'صحت مند' : 'Healthy') : scan.disease_name_en}</div>
+                    <div className="hist-crop">
+                      {isRTL ? (
+                        <span className="text-sm font-bold">{scan.crop_name_ur}</span>
+                      ) : (
+                        <span className="text-sm font-normal">{scan.crop_name_en}</span>
+                      )}
+                    </div>
+                    <div className="hist-disease">
+                      {isRTL ? (
+                        <span className="text-sm font-bold">{scan.is_healthy ? 'صحت مند' : scan.disease_name_ur || scan.disease_name_en}</span>
+                      ) : (
+                        <span className="text-sm font-normal">{scan.is_healthy ? 'Healthy' : scan.disease_name_en}</span>
+                      )}
+                    </div>
                     {scan.is_healthy ? (
                       <div className="badge badge-green">
                         <CheckCircle size={10} aria-hidden="true" /> Healthy
@@ -175,7 +193,13 @@ export default function HomePage() {
                   onClick={() => selectedCropSlugs.includes(crop.slug) ? removeCropSlug(crop.slug) : addCropSlug(crop.slug)}
                 >
                   <div className="crop-select-emoji">{CROP_ICONS[crop.slug] || '🌱'}</div>
-                  <div className="crop-select-name">{crop.name_en}<br/>{crop.name_ur}</div>
+                  <div className="crop-select-name">
+                    {isRTL ? (
+                      <span className="text-sm font-bold">{crop.name_ur}</span>
+                    ) : (
+                      <span className="text-sm font-normal">{crop.name_en}</span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

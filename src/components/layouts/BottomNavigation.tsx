@@ -9,7 +9,7 @@ export const BottomNavigation: React.FC = () => {
   const pathname = usePathname();
 
   return (
-    <div className="bottom-nav">
+    <div dir="ltr" className="bottom-nav">
       <Link href="/home" className={`nav-item ${pathname === '/home' ? 'active' : ''}`}>
         <div className="nav-icon">
           <Home aria-hidden="true" size={22} />

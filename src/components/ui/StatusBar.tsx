@@ -41,7 +41,7 @@ export function StatusBar({ background, color, rightLabel }: StatusBarProps) {
 
   return (
     <div className="status-bar" style={background ? { background } : undefined}>
-      <span style={color ? { color } : undefined}>{time}</span>
+      <span dir="ltr" className="inline-block text-sm font-bold" style={color ? { color } : undefined}>{time}</span>
       <span style={color ? { color } : undefined}>{rightLabel ?? 'WiFi / Batt'}</span>
     </div>
   );
