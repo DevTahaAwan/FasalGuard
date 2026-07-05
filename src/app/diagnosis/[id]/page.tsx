@@ -1,4 +1,4 @@
- 'use client';
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -76,7 +76,6 @@ export default function DiagnosisPage() {
         console.error('Advisory API error, falling back to mock:', err);
       }
 
-      // Fallback to mock advisory if API fails
       if (!cancelled) {
         const slug = analyzeResult?.disease_slug || 'healthy';
         const mockAdvisory = getMockAdvisory(slug);
@@ -87,36 +86,58 @@ export default function DiagnosisPage() {
 
     fetchAdvisory();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [advisoryResult, analyzeResult, setAdvisoryResult, language]);
 
-  // Save captured image to localStorage so it persists across renders
+  // Save captured image to localStorage so it persists across renders.
+  // This runs inside useEffect, which only ever executes client-side — safe as-is.
   useEffect(() => {
     if (capturedImageDataUrl) {
       localStorage.setItem('last_scan_img', capturedImageDataUrl);
     }
   }, [capturedImageDataUrl]);
 
-  // Read image from localStorage as fallback if Zustand state was cleared
-  let displayImage = capturedImageDataUrl;
-  if (!displayImage) {
-    displayImage = localStorage.getItem('last_scan_img');
-  }
+  // CRITICAL FIX: the previous version read localStorage directly in the
+  // render body:
+  //   let displayImage = capturedImageDataUrl;
+  //   if (!displayImage) displayImage = localStorage.getItem('last_scan_img');
+  //
+  // That runs during server-side rendering in Next.js App Router, where
+  // `localStorage` does not exist — throwing a ReferenceError on the SERVER
+  // for every single page load. Next.js surfaces this as a 500, which is the
+  // exact error seen in the browser console on this page. This explains why
+  // the result never rendered even immediately after a successful scan: the
+  // page was crashing server-side before any client-side state logic ran.
+  //
+  // Fixed by moving this into state, populated only inside useEffect (which
+  // only ever runs client-side, after hydration).
+  const [displayImage, setDisplayImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (capturedImageDataUrl) {
+      setDisplayImage(capturedImageDataUrl);
+    } else if (typeof window !== 'undefined') {
+      setDisplayImage(localStorage.getItem('last_scan_img'));
+    }
+  }, [capturedImageDataUrl]);
 
   const handleShare = () => {
     const cropEn = analyzeResult?.crop_name_en || 'Unknown';
     const cropUr = analyzeResult?.crop_name_ur || 'نامعلوم';
-    
+
     const isHealthy = analyzeResult?.is_healthy || advisoryResult?.advisory_type === 'healthy_confirmation';
-    const diseaseEn = isHealthy ? 'Healthy' : (analyzeResult?.disease_name_en || 'Unknown');
-    const diseaseUr = isHealthy ? 'صحت مند' : (analyzeResult?.disease_name_ur || 'نامعلوم');
-    
-    const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : 'Unknown';
+    const diseaseEn = isHealthy ? 'Healthy' : analyzeResult?.disease_name_en || 'Unknown';
+    const diseaseUr = isHealthy ? 'صحت مند' : analyzeResult?.disease_name_ur || 'نامعلوم';
+
+    const capitalize = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : 'Unknown');
     const severity = capitalize(analyzeResult?.severity || 'Unknown');
     const confidence = capitalize(analyzeResult?.confidence_level || 'Unknown');
     const summary = advisoryResult?.disease_summary || '';
 
-    let shareText = `🌿 *FasalGuard AI Diagnosis*\n\n` +
+    let shareText =
+      `🌿 *FasalGuard AI Diagnosis*\n\n` +
       `Crop: ${cropEn} (${cropUr})\n` +
       `Condition: ${diseaseEn} (${diseaseUr})\n` +
       `Severity: ${severity}\n` +
@@ -125,11 +146,9 @@ export default function DiagnosisPage() {
       `📱 Diagnosed by FasalGuard — AI Crop Health Scanner\n` +
       `🔗 fasalguard.vercel.app`;
 
-    // WhatsApp GET URL length limit is ~2000 chars. 
-    // encodeURIComponent inflates Urdu characters significantly (up to 9 chars per char).
-    // If it's too long, prioritize core diagnosis and branding over the summary.
     if (encodeURIComponent(shareText).length > 1800) {
-      shareText = `🌿 *FasalGuard AI Diagnosis*\n\n` +
+      shareText =
+        `🌿 *FasalGuard AI Diagnosis*\n\n` +
         `Crop: ${cropEn} (${cropUr})\n` +
         `Condition: ${diseaseEn} (${diseaseUr})\n` +
         `Severity: ${severity}\n` +
@@ -185,7 +204,7 @@ export default function DiagnosisPage() {
             <div className="screen-tag">{isRTL ? 'نتیجہ' : 'Result'}</div>
             <div style={{ width: '36px' }}></div>
           </div>
-          
+
           <div className="result-crop-tag">
             <span style={{ fontSize: '16px', marginRight: '4px' }}>{CROP_ICONS[analyzeResult.crop_type_slug || ''] || '🌱'}</span>
             {isRTL ? (
@@ -194,7 +213,7 @@ export default function DiagnosisPage() {
               <span className="text-base font-normal">{analyzeResult.crop_name_en}</span>
             )}
           </div>
-          
+
           <div className="result-disease">
             {isRTL ? (
               <span className="text-xl font-bold leading-relaxed">{isHealthy ? 'فصل صحت مند ہے' : analyzeResult.disease_name_ur}</span>
@@ -202,7 +221,7 @@ export default function DiagnosisPage() {
               <span className="text-base font-normal">{isHealthy ? 'Crop is Healthy' : analyzeResult.disease_name_en}</span>
             )}
           </div>
-          
+
           {!isHealthy && (
             <div className="severity-bar">
               <div className="sev-label">Severity</div>
@@ -260,14 +279,15 @@ export default function DiagnosisPage() {
             <div className="info-card-body">
               <p className="text-gray-700 mt-2">{displaySummary}</p>
               {advisoryResult.disease_summary && advisoryResult.disease_summary.length > 100 && (
-                <button 
+                <button
                   onClick={() => setIsExpanded(!isExpanded)}
                   className="mt-2 text-green-700 font-bold underline min-h-[48px] p-2"
                 >
                   {isExpanded ? (isRTL ? 'کم دکھائیں' : 'Read Less') : (isRTL ? 'مزید پڑھیں' : 'Read More')}
                 </button>
               )}
-              <br/><br/>
+              <br />
+              <br />
               <span style={{ fontFamily: "'Noto Nastaliq Urdu',serif", fontSize: '14px', direction: 'rtl', display: 'block', marginTop: '8px' }}>
                 {advisoryResult.severity_explanation}
               </span>
@@ -292,7 +312,7 @@ export default function DiagnosisPage() {
                   </div>
                 </div>
               ))}
-              
+
               {advisoryResult.safety_note && (
                 <div className="treatment-item">
                   <div className="treat-num" style={{ background: '#fef2f2', color: '#dc2626' }}>!</div>
