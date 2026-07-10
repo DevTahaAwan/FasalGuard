@@ -75,10 +75,11 @@ export async function POST(request: NextRequest) {
     }
 
     const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) {
-      console.error('GEMINI_API_KEY is not set');
+    const modelName = process.env.GEMINI_MODEL_NAME;
+    if (!geminiKey || !modelName) {
+      console.error('GEMINI_API_KEY or GEMINI_MODEL_NAME is not set');
       return NextResponse.json(
-        { error: 'API Key Missing', message: 'GEMINI_API_KEY is not configured on the server.' },
+        { error: 'Configuration Missing', message: 'GEMINI_API_KEY or GEMINI_MODEL_NAME is not configured on the server.' },
         { status: 500 },
       );
     }
@@ -90,12 +91,6 @@ export async function POST(request: NextRequest) {
       if (match && match[1]) mimeType = match[1];
       base64Data = base64Data.split(',')[1] || base64Data;
     }
-
-    // IMPORTANT: this reads the same env var you already wired for the model
-    // name in analyze/route.ts. Confirm the variable name below matches what
-    // you actually named it in .env.local / Vercel — if it's different,
-    // this is a one-line fix, not a new debugging session.
-    const modelName = process.env.GEMINI_MODEL_NAME || 'gemini-2.5-flash';
 
     const genAI = new GoogleGenerativeAI(geminiKey);
     const model = genAI.getGenerativeModel({

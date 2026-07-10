@@ -93,10 +93,11 @@ CRITICAL — asymmetric risk: a missed disease costs a farmer a real crop and a 
 - When symptoms are visible but ambiguous between two similar diseases, pick the more common one for ${cropTypeSlug} in Pakistan and note the alternative in your reasoning, rather than defaulting to "healthy" to avoid choosing.`;
 
     const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) {
-      console.error('GEMINI_API_KEY is not set');
+    const modelName = process.env.GEMINI_MODEL_NAME;
+    if (!geminiKey || !modelName) {
+      console.error('GEMINI_API_KEY or GEMINI_MODEL_NAME is not set');
       return NextResponse.json(
-        { error: 'API Key Missing', message: 'GEMINI_API_KEY is not configured on the server.' },
+        { error: 'Configuration Missing', message: 'GEMINI_API_KEY or GEMINI_MODEL_NAME is not configured on the server.' },
         { status: 500 },
       );
     }
@@ -108,11 +109,6 @@ CRITICAL — asymmetric risk: a missed disease costs a farmer a real crop and a 
       if (match && match[1]) mimeType = match[1];
       base64Data = base64Data.split(',')[1] || base64Data;
     }
-
-    // IMPORTANT: confirm this env var name matches what you actually set —
-    // you mentioned moving the model name into .env.local yourself. If your
-    // variable is named differently, this is a one-line rename, not a new bug.
-    const modelName = process.env.GEMINI_MODEL_NAME || 'gemini-2.5-flash';
 
     const genAI = new GoogleGenerativeAI(geminiKey);
     const model = genAI.getGenerativeModel({

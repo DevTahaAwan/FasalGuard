@@ -88,12 +88,12 @@ export async function POST(request: NextRequest) {
     }
 
     const geminiKey = process.env.GEMINI_API_KEY;
-    const geminiModel = process.env.GEMINI_MODEL;
+    const geminiModel = process.env.GEMINI_MODEL_NAME;
 
     if (!geminiKey || !geminiModel) {
-      console.error('GEMINI_API_KEY or GEMINI_MODEL is not set');
+      console.error('GEMINI_API_KEY or GEMINI_MODEL_NAME is not set');
       return NextResponse.json(
-        { success: false, error: { code: 'CONFIG_ERROR', message: 'Gemini configuration (API key or model) missing', message_ur: 'سرور کی ترتیب میں خرابی' } },
+        { success: false, error: { code: 'CONFIG_ERROR', message: 'Gemini configuration (API key or model name) missing', message_ur: 'سرور کی ترتیب میں خرابی' } },
         { status: 500 },
       );
     }
