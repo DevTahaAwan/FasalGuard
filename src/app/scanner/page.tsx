@@ -110,7 +110,7 @@ export default function ScannerPage() {
 
   // Modified camera lifecycle hook
   useEffect(() => {
-    if (view === 'camera' && phase !== 'analyzing' && phase !== 'validating') {
+    if (view === 'camera' && phase !== 'analyzing' && phase !== 'validating' && phase !== 'error') {
       startCamera();
     } else if (view !== 'camera') {
       stopCamera();
@@ -319,19 +319,32 @@ export default function ScannerPage() {
     }
   };
 
-  const handleRetry = () => {
+  const handleTryAgain = async () => {
+    // 1. Explicitly stop existing camera tracks to free up hardware
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      const tracks = stream.getTracks();
+      tracks.forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+
+    // 2. Reset UI states so the error screen disappears
     reset();
+
     if (view === 'confirm') {
       setView('camera');
     }
-    if (view === 'camera') {
-      startCamera();
-    } else {
+    if (view !== 'camera' && view !== 'confirm') {
       setView('entry');
       setPath(null);
       setTempImage(null);
       setSelectedCropSlugLocal(null);
       setIdentifiedCrop(null);
+    } else {
+      // 3. Re-initialize the camera properly
+      if (startCamera) {
+        startCamera(); 
+      }
     }
   };
 
@@ -389,7 +402,7 @@ export default function ScannerPage() {
           </p>
           {showRetry && (
             <button
-              onClick={handleRetry}
+              onClick={handleTryAgain}
               style={{
                 padding: '12px 28px',
                 background: 'var(--green-accent)',
