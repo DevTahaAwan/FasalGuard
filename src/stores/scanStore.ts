@@ -32,15 +32,11 @@ interface ScanState {
   phase: ScanPhase;
   errorCode: ScanErrorCode | null;
   errorMessage: string | null;
-  // Captured image
   capturedImageDataUrl: string | null;
   selectedCropSlug: string | null;
   language: Language;
-  // Stage 1 result
   analyzeResult: ScanAnalyzeResponse | null;
-  // Stage 2 result
   advisoryResult: AdvisoryResponse | null;
-  // Current scan ID (for linking analyze → advisory)
   currentScanId: string | null;
 }
 
@@ -59,8 +55,6 @@ interface ScanActions {
 
 type ScanStore = ScanState & ScanActions;
 
-// ─── Initial State ─────────────────────────────────────────────────────────────
-
 const INITIAL_STATE: ScanState = {
   phase: 'idle',
   errorCode: null,
@@ -72,8 +66,6 @@ const INITIAL_STATE: ScanState = {
   advisoryResult: null,
   currentScanId: null,
 };
-
-// ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useScanStore = create<ScanStore>()((set, get) => ({
   ...INITIAL_STATE,
@@ -93,6 +85,17 @@ export const useScanStore = create<ScanStore>()((set, get) => ({
     set({
       analyzeResult: result,
       currentScanId: result.scan_id,
+      // CRITICAL FIX: advisoryResult must be cleared here. Without this, a
+      // SECOND scan in the same session keeps the FIRST scan's stale
+      // advisoryResult object in the store. The diagnosis page has an early
+      // return — `if (advisoryResult) { setLoading(false); return; }` — that
+      // fires on the stale data, skips fetching a new advisory, and never
+      // calls setAdvisoryResult() again for the new scan. Since ONLY
+      // setAdvisoryResult() ever sets phase to 'complete', the page's guard
+      // clause (`phase !== 'complete'`) stays true forever, and the result
+      // never renders — exactly the persistent "Loading result..." hang
+      // seen on every scan after the first one in a browser session.
+      advisoryResult: null,
       phase: result.status === 'low_confidence' ? 'error' : 'advisory',
       errorCode:
         result.status === 'low_confidence' ? 'LOW_CONFIDENCE' : null,
