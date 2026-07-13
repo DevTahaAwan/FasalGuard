@@ -168,8 +168,22 @@ export default function DiagnosisPage() {
     return (
       <AppLayout>
         <div className="screen active">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', padding: '20px', textAlign: 'left' }}>
             <p>Loading result...</p>
+            <pre style={{ fontSize: '11px', background: '#f0f0f0', padding: '12px', marginTop: '20px', maxWidth: '90vw', overflow: 'auto', textAlign: 'left', border: '1px solid #ccc' }}>
+              {JSON.stringify(
+                {
+                  loading,
+                  phase,
+                  hasAdvisoryResult: !!advisoryResult,
+                  hasAnalyzeResult: !!analyzeResult,
+                  analyzeResultScanId: analyzeResult?.scan_id ?? null,
+                  currentUrlScanId: typeof window !== 'undefined' ? window.location.pathname.split('/').pop() : null,
+                },
+                null,
+                2,
+              )}
+            </pre>
           </div>
         </div>
       </AppLayout>
