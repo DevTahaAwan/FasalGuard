@@ -60,10 +60,20 @@ export default function ScannerPage() {
   const [selectedCropSlugLocal, setSelectedCropSlugLocal] = useState<string | null>(null);
   const [identifiedCrop, setIdentifiedCrop] = useState<{ crop_type_slug: string, crop_name_en: string, crop_name_ur: string, confidence_score: number } | null>(null);
   const [tempImage, setTempImage] = useState<string | null>(null);
+  const pathRef = useRef<'A' | 'B' | null>(null);
+  const selectedCropSlugRef = useRef<string | null>(null);
 
   useEffect(() => {
     setIsVisible(true);
   }, []);
+
+  useEffect(() => {
+    pathRef.current = path;
+  }, [path]);
+
+  useEffect(() => {
+    selectedCropSlugRef.current = selectedCropSlugLocal;
+  }, [selectedCropSlugLocal]);
 
   const isRTL = language === 'ur';
 
@@ -255,8 +265,9 @@ export default function ScannerPage() {
 
     const smallDataUrl = resizeCanvas.toDataURL('image/jpeg', 0.8);
     
-    if (path === 'A' && selectedCropSlugLocal) {
-      await processAndAnalyzeImage(smallDataUrl, selectedCropSlugLocal);
+    console.log('SHUTTER FIRED — path:', path, 'pathRef:', pathRef.current, 'cropSlug:', selectedCropSlugLocal, 'cropSlugRef:', selectedCropSlugRef.current);
+    if (pathRef.current === 'A' && selectedCropSlugRef.current) {
+      await processAndAnalyzeImage(smallDataUrl, selectedCropSlugRef.current);
     } else {
       await identifyCrop(smallDataUrl);
     }
