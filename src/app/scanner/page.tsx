@@ -241,6 +241,10 @@ export default function ScannerPage() {
   };
 
   const handleCapture = async () => {
+    if (typeof window !== 'undefined') {
+      (window as any).__shutterFired = ((window as any).__shutterFired || 0) + 1;
+      alert('SHUTTER FIRED #' + (window as any).__shutterFired + ' — path=' + path + ' cropSlug=' + selectedCropSlugLocal);
+    }
     if (!videoRef.current || !canvasRef.current || !cameraActive) return;
 
     setValidating();
