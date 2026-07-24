@@ -67,6 +67,13 @@ export default function ScannerPage() {
     setIsVisible(true);
   }, []);
 
+  // Fix #2: Wipe any lingering state from a previous scan session on mount.
+  useEffect(() => {
+    setTempImage(null);
+    setIdentifiedCrop(null);
+    reset();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     pathRef.current = path;
   }, [path]);
@@ -199,9 +206,15 @@ export default function ScannerPage() {
           break;
         }
 
-        setAnalyzeResult(json.data);
-        router.push(`/diagnosis/${json.data.scan_id}`);
-        succeeded = true;
+        // Fix #1: Only route after result is stored AND scan_id is verified present.
+        if (json.data && json.data.scan_id) {
+          setAnalyzeResult(json.data);
+          router.push(`/diagnosis/${json.data.scan_id}`);
+          succeeded = true;
+        } else {
+          lastErrorCode = 'UNKNOWN';
+          lastError = 'Server returned an incomplete result. Please try again.';
+        }
         break;
       }
 
@@ -521,10 +534,13 @@ export default function ScannerPage() {
             {MOCK_CROPS.map(crop => (
                <button key={crop.slug} className="p-4 bg-white border border-gray-200 rounded-xl flex flex-col items-center justify-center min-h-[48px] shadow-sm" onClick={() => {
                  setSelectedCropSlugLocal(crop.slug);
+                 // Fix #3: Only trigger analysis if a real image was already captured.
+                 // Without this guard, selecting a crop with no image causes a phantom
+                 // analysis call with a null/stale dataUrl.
                  if (tempImage) {
-                   setView('camera');
                    processAndAnalyzeImage(tempImage, crop.slug);
                  } else {
+                   // No image yet — just go back to live camera with crop pre-selected.
                    setView('camera');
                  }
                }}>
